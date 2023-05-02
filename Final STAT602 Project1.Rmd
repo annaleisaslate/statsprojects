@@ -1,0 +1,943 @@
+--
+title: "STAT 602 Project One"
+author: "Angela, Anna Leisa, Hacene , Divanshu & Jacob"
+date: "2/23/2023"
+output:
+  html_document: default
+  pdf_document: default
+---
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T,warning=F,message=F)
+```
+
+# Libraries
+
+```{r}
+# Installing required packages and loading libraries
+
+library(ggplot2)
+library(GGally)
+library(MASS)
+library(class)
+library(mclust)
+library(knitr)
+library(dplyr)
+library(gridExtra)
+library(scales)
+library(corrplot)
+library(naivebayes)
+library(e1071)
+library(psych)
+
+```
+
+
+# Step1 : Loading the data, Missing values Check, Summary of the data & Vizually checked the data  
+
+```{r}
+setwd("/Users/annaleisasauser/Desktop")
+```
+
+
+
+```{r}
+#Loading labeled data set using read.csv
+
+data_bean <- read.csv('labeled.csv', header=TRUE, stringsAsFactor = TRUE)
+
+# Checking dataset format
+str(data_bean) 
+
+# Missing Value check in the data 
+sum(is.na(data_bean))
+
+# Summary of the data 
+summary(data_bean[c(-1,-9)])
+
+# Removing the X variable from the data 
+bean_data_updated <- data_bean[-c(1)]
+
+
+```
+The above summary shows that beans data consists of 3000 observations. There are no missing values in the data. On a visual check there are no issues found with the data. 
+
+## Step2: Exploratory Data Analysis
+
+
+```{r}
+bictest <- Mclust(data_bean)
+summary(bictest)
+```
+
+
+### Exploring the data using Box plots & Correlation plots. 
+
+```{r}
+
+# Box plots to show distributions of numeric Predictors vs Response variable.
+
+ggplot(bean_data_updated, aes(x = Class, y = Area, color = Class)) + geom_boxplot() + ggtitle("Beans VS Area")
+
+ggplot(bean_data_updated, aes(x = Class, y = MajorAxisLength, color = Class)) + geom_boxplot() + ggtitle("Beans VS MajorAxisLength")
+
+ggplot(bean_data_updated, aes(x = Class, y = MinorAxisLength, color = Class)) + geom_boxplot() + ggtitle("Beans VS MinorAxisLength")
+
+ggplot(bean_data_updated, aes(x = Class, y = Perimeter, color = Class)) + geom_boxplot() + ggtitle("Beans VS Perimeter")
+
+ggplot(bean_data_updated, aes(x = Class, y = Eccentricity, color = Class)) + geom_boxplot() + ggtitle("Beans VS Eccentricity")
+
+ggplot(bean_data_updated, aes(x = Class, y = ConvexArea, color = Class)) + geom_boxplot() + ggtitle("Beans VS ConvexArea")
+
+ggplot(bean_data_updated, aes(x = Class, y = Extent, color = Class)) + geom_boxplot() + ggtitle("Beans VS Extent")
+
+```
+	
+From the above box plots, we can see there are some outliers in the data. For the most part there is not much overlapping in the box plots which shows that there is stronger association with the class variable, but for beans vs extent box plots shows that there is strong overlapping indicates there is less association with the class variable. 
+
+Reference: https://ggplot2.tidyverse.org/reference/geom_boxplot.html
+
+## Correlation Matrix 
+
+```{r}
+
+#  Calculating and Plotting Correlation Matrix
+corrplot(cor(bean_data_updated[,-8]), method="number")
+
+```
+The Correlation plot shows that variables (Area,Perimeter, MajorAxisLength, MinorAxisLength and ConvexArea ) are highly correlated meanwhile Eccentricity and Extent variable are not correlated
+
+
+### Step3 a: Splittin Beans data into a training set and a test set.
+
+```{r}
+
+# splitting the data into train and test
+
+# Set the seed
+set.seed(1)
+
+#create ID column
+bean_data_updated$seq <- 1:nrow(bean_data_updated)
+
+#Use 70% of data set as training set and 30% as test set 
+bean_data_updated_train <- bean_data_updated %>% dplyr::sample_frac(0.70)
+bean_data_updated_test  <- dplyr::anti_join(bean_data_updated, bean_data_updated_train , by = 'seq')
+
+# Checking training data dimension
+cat('Train set:',dim(bean_data_updated_train ), '\n')
+
+# Checking training data dimension
+cat('Test set:',dim(bean_data_updated_test))
+
+# Removing the seq variable from training data set
+bean_data_updated_train <- bean_data_updated_train[-c(9)]
+
+# Removing the seq variable from testing data set
+bean_data_updated_test <- bean_data_updated_test[-c(9)]
+
+# Summary of Training data 
+summary(bean_data_updated_train[c(-8)])
+
+```
+After splitting the data, the bean train data have 2100 observations and test have 900 observations 
+
+# Step 3 b: Actual Price per seed & Weight Calculation
+
+```{r}
+# Price per seed of six classes of beans
+price.per.bean<- c( "BOMBAY"=((5.56*1.92)/453.592),
+                    "CALI"=((6.02*0.61)/453.592),
+                    "DERMASON"=((1.98*0.28)/453.592),
+                    "HOROZ"=((2.43*0.52)/453.592),
+                    "SEKER"=((2.72*0.49)/453.592),
+                    "SIRA"=((5.40*0.38)/453.592))
+
+# Weight per seed of six classes of beans
+weight.per.bean <- c("BOMBAY"=(1.92),
+                     "CALI"=(0.61),
+                     "DERMASON"=(0.28),
+                     "HOROZ"=(0.52),
+                     "SEKER"=(0.49),
+                     "SIRA"=(0.38))
+
+# Actual price of each bean type in test data set
+true_bean_price <- data.frame(price.per.bean[bean_data_updated_test$Class])
+
+# Using the class variable from test data and applying the above calculation to get the true Weight 
+true_bean_weight <-  data.frame(weight.per.bean[bean_data_updated_test$Class])
+
+```
+
+### Step4 Approach taken : Since the response variable has more than two classes, we chose LDA for variable selection based on the best accuracy observed by running the following 6 LDA models  
+
+
+a: Variable selection using the box plots, correlation matrix and testing accuracy of LDA models with different predictors 
+
+#Lda Model1 with all the predictors
+
+```{r}
+
+# Fitting the LDA Model using all the Predictors
+LDA_beans_mdl1 = lda(Class~., data=bean_data_updated_train )
+
+# Testing the model
+LDA_pred1 <-predict(LDA_beans_mdl1,bean_data_updated_test)
+
+# Get the response variable values,model predictions
+LDA_Predictions1 <- LDA_pred1$class
+
+# Get the actual response variable values from testing data
+true_values  <- bean_data_updated_test$Class
+
+# Get Accuracy Matrix
+table(LDA_Predictions1, true_values)
+
+# Calculating the accuracy
+LDA_mdl1_Accr <- mean(LDA_Predictions1 ==true_values)
+
+# Predicting Weights on testing data
+LDA_predicted_weight1 <- data.frame(weight.per.bean[LDA_pred1$class])
+
+# Get the weight difference between the actual and predicted values
+Weight_diff1 <- abs(sum(true_bean_weight)-sum(LDA_predicted_weight1))
+
+# Predicting the price on test data
+LDA_predicted_price1 <- data.frame(price.per.bean[LDA_pred1$class])
+
+#calculating the Sum of square error on price for Model Selection
+LDA_Price_compare1 <- cbind(sum(LDA_predicted_price1), sum(true_bean_price))
+LDA_Price_compare1
+
+# Calculate price Price Difference 
+price_diff1 <- abs( sum(true_bean_price)- sum(LDA_predicted_price1))
+
+# Sum of the price square error or price variance
+SSE_LDA1 = sum((true_bean_price- LDA_predicted_price1)^2)
+
+# Printing Results
+cat("LDA Accuracy mdl1 is:",LDA_mdl1_Accr)
+cat(" , ")
+cat("Sum of squared errors for price:", SSE_LDA1  )
+
+```
+
+### b: LDA Model2 with Eccentricity , Extent ,  Area , Perimeter , MajorAxisLength &  MinorAxisLength  . Removing  ConvexArea because of high correlation.  
+
+```{r}
+# Fitting the LDA Model using Eccentricity , Extent ,  Area , Perimeter , MajorAxisLength &  MinorAxisLength  Predictors
+LDA_beans_mdl2 = lda(Class~ Eccentricity +  Extent + Area +Perimeter + MajorAxisLength + MinorAxisLength, data=bean_data_updated_train )
+
+# Creating a confusion Matrix 
+
+LDA_pred2 <-predict(LDA_beans_mdl2,bean_data_updated_test)
+LDA_Predictions2 <- LDA_pred2$class
+true_values  <- bean_data_updated_test$Class
+table(LDA_Predictions2, true_values)
+
+# Calculating the accuracy
+
+LDA_mdl2_Accr <- mean(LDA_Predictions2 ==true_values)
+
+# Predicting Weights on test data
+
+LDA_predicted_weight2 <- data.frame(weight.per.bean[LDA_pred2$class])
+
+Weight_diff2 <- abs(sum(true_bean_weight)-sum(LDA_predicted_weight2))
+
+# Predicting the price on test data and then calculating the Sum of square error on price for Model Selection
+
+LDA_predicted_price2 <- data.frame(price.per.bean[LDA_pred2$class])
+LDA_Price_compare2 <- cbind(sum(LDA_predicted_price2), sum(true_bean_price))
+LDA_Price_compare2
+
+# Price Difference 
+
+price_diff2 <- abs(sum(true_bean_price)-sum(LDA_predicted_price2))
+
+# Sum of the price square error or price variance
+
+SSE_LDA2 = sum((true_bean_price-LDA_predicted_price2)^2)
+
+# Printing Results
+cat("LDA Accuracy mdl2 is:",LDA_mdl2_Accr)
+cat(" , ")
+cat("Sum of squared errors for price:", SSE_LDA2 )
+
+```
+
+### c: LDA Model3 with Eccentricity, Extent,  Area, Perimeter & MajorAxisLength . Removing MinorAxisLength & ConvexArea because of high correlation.  
+
+```{r}
+
+# Fitting the LDA Model using Eccentricity, Extent,  Area, Perimeter & MajorAxisLength  Predictors
+LDA_beans_mdl3 = lda(Class~ Eccentricity +  Extent + Area +Perimeter + MajorAxisLength , data=bean_data_updated_train )
+
+# Creating a confusion Matrix 
+
+LDA_pred3 <-predict(LDA_beans_mdl3,bean_data_updated_test)
+LDA_Predictions3 <- LDA_pred3$class
+true_values  <- bean_data_updated_test$Class
+table(LDA_Predictions3, true_values)
+
+# Calculating the accuracy
+LDA_mdl3_Accr <- mean(LDA_Predictions3 ==true_values)
+
+# Predicting Weights on test data
+LDA_predicted_weight3 <- data.frame(weight.per.bean[LDA_pred3$class])
+
+Weight_diff3 <- abs(sum(true_bean_weight)-sum(LDA_predicted_weight3))
+
+
+# Predicting the price on test data and then calculating the Sum of square error on price for Model Selection
+LDA_predicted_price3 <- data.frame(price.per.bean[LDA_pred3$class])
+LDA_Price_compare3 <- cbind(sum(LDA_predicted_price3), sum(true_bean_price))
+LDA_Price_compare3
+
+# Price Difference 
+price_diff3 <- abs(sum(true_bean_price)-sum(LDA_predicted_price3))
+
+# Sum of the price square error or price variance
+SSE_LDA3 = sum((true_bean_price-LDA_predicted_price3)^2)
+
+# Printing Results
+cat("LDA Accuracy mdl3 is:",LDA_mdl3_Accr)
+cat(" , ")
+cat("Sum of squared errors for price:", SSE_LDA3  )
+
+
+```
+
+### d: LDA Model4 with Eccentricity, Extent,  Area & Perimeter  . Removing MajorAxisLength, MinorAxisLength & ConvexArea because of high correlation.  
+
+
+```{r}
+
+# Fitting the LDA Model using Eccentricity, Extent,  Area & Perimeter  Predictors
+LDA_beans_mdl4 = lda(Class~ Eccentricity +  Extent + Area +Perimeter , data=bean_data_updated_train )
+
+# Creating a confusion Matrix 
+LDA_pred4 <-predict(LDA_beans_mdl4,bean_data_updated_test)
+LDA_Predictions4 <- LDA_pred4$class
+true_values  <- bean_data_updated_test$Class
+table(LDA_Predictions4, true_values)
+
+# Calculating the accuracy
+LDA_mdl4_Accr <- mean(LDA_Predictions4 ==true_values)
+
+# Predicting Weights on test data
+LDA_predicted_weight4 <- data.frame(weight.per.bean[LDA_pred4$class])
+
+# Calculatng weight difference
+Weight_diff4 <- abs(sum(true_bean_weight)-sum(LDA_predicted_weight4))
+
+# Predicting the price on test data and then calculating the Sum of square error on price for Model Selection
+LDA_predicted_price4 <- data.frame(price.per.bean[LDA_pred4$class])
+LDA_Price_compare4 <- cbind(sum(LDA_predicted_price4), sum(true_bean_price))
+LDA_Price_compare4
+
+# Price Difference 
+price_diff4 <- abs(sum(true_bean_price)-sum(LDA_predicted_price4))
+
+# Sum of the price square error or price variance
+SSE_LDA4 = sum((true_bean_price-LDA_predicted_price4)^2)
+
+# Printing Results
+cat("LDA Accuracy mdl4 is:",LDA_mdl4_Accr)
+cat(" , ")
+cat("Sum of squared errors for price:", SSE_LDA4  )
+
+
+```
+
+### e: LDA Model5 with Eccentricity, Extent & Area   . Removing MajorAxisLength, MinorAxisLength , ConvexArea & Perimeter because of high correlation.  
+
+
+```{r}
+
+# Fitting the LDA Model using Eccentricity, Extent & Area  Predictors
+LDA_beans_mdl5 = lda(Class~ Eccentricity +  Extent + Area  , data=bean_data_updated_train )
+
+# Creating a confusion Matrix 
+LDA_pred5 <-predict(LDA_beans_mdl5,bean_data_updated_test)
+LDA_Predictions5 <- LDA_pred5$class
+true_values  <- bean_data_updated_test$Class
+table(LDA_Predictions5, true_values)
+
+# Calculating the accuracy
+LDA_mdl5_Accr <- mean(LDA_Predictions5 ==true_values)
+
+
+# Predicting Weights on test data
+LDA_predicted_weight5 <- data.frame(weight.per.bean[LDA_pred5$class])
+
+# Calculating weight difference
+Weight_diff5 <- abs(sum(true_bean_weight)-sum(LDA_predicted_weight5))
+
+# Predicting the price on test data and then calculating the Sum of square error on price for Model Selection
+LDA_predicted_price5 <- data.frame(price.per.bean[LDA_pred5$class])
+LDA_Price_compare5 <- cbind(sum(LDA_predicted_price5), sum(true_bean_price))
+LDA_Price_compare5
+
+# Price Difference 
+price_diff5 <- abs( sum(true_bean_price)-sum(LDA_predicted_price5))
+
+# Sum of the price square error or price variance
+SSE_LDA5 = sum((true_bean_price-LDA_predicted_price5)^2)
+
+# Printing Results
+cat("LDA Accuracy mdl5 is:",LDA_mdl5_Accr)
+cat(" , ")
+cat("Sum of squared errors for price:", SSE_LDA5  )
+
+```
+
+## Based on the least Sum of square errors on price LDA model ( LDA_beans_mdl5) with Eccentricity +  Extent + Area predictors is the best model among other LDA models for this analysis. In the next step we performed a 10 fold cross validation to validate our results. 
+
+# Chacking he model properties
+```{r}
+#Display model
+LDA_beans_mdl5
+
+```
+
+Based on the prior probabilities of groups results, The training data set is distributed approximately equal for all beans type except for a slight increase for SIRA beans type.
+The proportion of trace indicates that first linear discriminant(LD1) used by the model has the highest separation percentage 87.46%.
+
+
+#Step 5- Applying Cross Validation with K=10 for selected LDA mModel
+
+```{r}
+'Set seed'
+set.seed(123)
+
+'sample range lies between 1 to 3000 based on dataste rows number'
+var_sample = sample(1:3000, 3000)
+
+'Set the folds size and index'
+folds=cbind(sort(rep(seq(1, 10, 1), 300))[1:3000], var_sample)
+
+'Set a null variable to hold model accuracy for each iteration'
+var_values = NULL
+
+'Running the loop for CV nethos with K=10'
+for (i in 1:10)
+{    
+    'Set the index for selected fold'
+    index.i = folds[folds[,1]==i, 2]
+    
+    'Get the testing data based on fold index'
+    dat_tst = bean_data_updated[index.i,]
+    
+    'Get the training data based on fold index'
+    dat_trn = bean_data_updated[ - index.i,]
+    
+    'Training the model'
+    LDA_beans_mdl5 = lda(Class~ Eccentricity +  Extent + Area , data=dat_trn)
+    
+    'Testing the model'
+    LDA_pred <-predict(LDA_beans_mdl5,dat_tst)
+    
+    'Get the predicted class values'
+    LDA_Predictions <- LDA_pred$class
+    
+    'Get testing data response values data'
+    true_values  <- dat_tst$Class
+    
+    'Calculate the model accuracy'
+    acc_mdl5 <- mean(LDA_Predictions ==true_values)
+    
+    
+    'Storing the model accuracy value bsod on the iteration k value'
+    var_values[i]= acc_mdl5
+}
+
+'Display the average model accuracy for the Cross Validation with K=10'
+mean(var_values)
+
+```
+The 10 folds cross validation accuracy for LDA model with Eccentricity +  Extent + Area predictors is 87 percent which is very close with the accuracy we calculated above.
+
+### Step 6 : Validating the test data to make sure all the samples are predicted for price and weight. There is no missing value
+
+
+```{r}
+
+bean_data_updated_test$LDA_predicted_price <- price.per.bean[LDA_pred5$class]
+bean_data_updated_test$LDA_predicted_weight <- weight.per.bean[LDA_pred5$class]
+
+### Missing Value check for the predictions
+
+sum(is.na(bean_data_updated_test))
+summary(is.na(bean_data_updated_test))
+
+### Removing the predicted variables from the test data so that it can be used for other models. 
+
+bean_data_updated_test<- bean_data_updated_test[-c(9,10)]
+bean_data_updated_test
+```
+From the above missing value check we can see all the 900 prediction were made properly for price and weight. 
+
+
+# Step 7: Beginning QDA Analysis. Looking at QDA with the selected variables eccentricity, extent & area
+
+
+```{r}
+set.seed(1234)
+
+# Fitting the QDA Model using Eccentricity, Extent & Area Predictors
+
+QDAmodel = qda(Class~Eccentricity+Extent+Area, data=bean_data_updated_train)
+
+# Creating a confusion Matrix 
+QDA_pred <-predict(QDAmodel,bean_data_updated_test)
+
+#Labels for predictions'
+QDA_predictions <- QDA_pred$class
+
+true_values <- bean_data_updated_test$Class
+#Confusion matrix'
+table(QDA_predictions, true_values)
+
+# Calculating the accuracy
+qdamodel_Accr <- mean(QDA_predictions ==true_values)
+
+# Predicting Weights on test data
+
+QDA_predicted_weight <- data.frame(weight.per.bean[QDA_pred$class])
+
+QDA_Weight_diff <- abs(sum(true_bean_weight)-sum(QDA_predicted_weight))
+
+# Predicting the price on test data and then calculating the Sum of square error on price 
+
+QDA_predicted_price <- data.frame(price.per.bean[QDA_pred$class])
+QDA_Price_compare <- cbind(sum(QDA_predicted_price), sum(true_bean_price))
+
+
+# Price Difference 
+QDA_price_diff <- abs( sum(true_bean_price)-sum(QDA_predicted_price))
+
+
+# Sum of the price square error or price variance
+SSE_QDA = sum((true_bean_price-QDA_predicted_price)^2)
+
+# Printing Results
+cat("QDA Accuracy is:",qdamodel_Accr)
+cat(" , ")
+cat("Sum of squared errors for price:", SSE_QDA )
+
+```
+
+The accuracy of the QDA model increase over LDA by 4%. The accuracy of QDA model is 91%. The sum of square error for price is less than LDA model5.  
+
+### Step 8 KNN model 
+
+```{r}
+
+set.seed(123)
+
+#Scale the dataset
+bean_data_updated_knn <- as.data.frame(scale(bean_data_updated[,- c(2,3,4,6,8,9)]))
+
+#Set predictores dataset
+bean_data_updated_knn$Class <- bean_data_updated[,8]
+
+#Get rows dataset number
+numrow = nrow(bean_data_updated_knn) 
+
+#Set training index datas et to get 70% of main data set
+trn_ind = sample(1:numrow,size = as.integer(0.7*numrow))
+
+#Set training data set
+train_df  <- bean_data_updated_knn[trn_ind,]
+'Set testing dataset'
+test_df   <- bean_data_updated_knn[-trn_ind,]
+
+
+#Set response variable values for training data set
+train_labels <- train_df[,4]
+
+#Set response variable values for testing data set
+test_labels <- test_df[,4]
+
+#Set Predictors dataset for training data
+data_train <- train_df[,-4]
+
+#Set Predictors data set for testing data
+data_test <- test_df[,-4]
+
+
+#A varible to hold CV model accuraccies
+var_acc_knn=NULL
+
+for (i in 1:15){
+  
+  #Get model predictions'
+  knn_preds <- knn( data_train,data_test, cl = train_labels, k= i)
+  
+   #Store accuracy results'
+   var_acc_knn[i] <- mean(knn_preds == test_labels)
+  
+}
+
+#Calculate the mean accuracy for CV
+mean(var_acc_knn)
+
+#Plotting the accuracy of the KNN
+
+plot(var_acc_knn, type="b", xlab="K- Value",ylab="KNN Accuracy",col = "Green", main=paste("Optimal K:", which.max(var_acc_knn)))
+
+```
+From the above plot, we can the maximum accuracy is achieved at K =3. 
+
+### Step 8b: Creating the KNN model using K = 3. 
+```{r}
+set.seed(12345)
+
+knn_pred <- knn(data_train,data_test, cl = train_labels, k=3)
+
+# Confusion Matrix 
+ table(knn_pred , test_labels)
+
+# Checking accuracy of kNN model
+
+KNN_Accr <- mean(knn_pred==test_labels)
+
+cat("Accuracy of kNN Model:", KNN_Accr)
+
+```
+
+```{r}
+
+# KNN Actual price of each bean type in test data set
+
+KNN_true_bean_price <- data.frame(price.per.bean[test_labels])
+KNN_mean_true_bean_price <- mean(price.per.bean[test_labels])
+
+# using the class variable from test data and applying the above calculation to get the true Weight. 
+
+KNN_true_bean_weight <-  data.frame(weight.per.bean[test_labels])
+
+
+# Predicting Weights on test data
+
+KNN_predicted_weight <- data.frame(weight.per.bean[knn_pred])
+
+KNN_Weight_diff <- abs(sum(KNN_true_bean_weight)-sum(KNN_predicted_weight))
+
+# Predicting the price on test data and then calculating the Sum of square error on price 
+
+KNN_predicted_price <- data.frame(price.per.bean[knn_pred])
+KNN_Price_compare <- cbind(sum(KNN_predicted_price), sum(KNN_true_bean_price))
+KNN_Price_compare
+
+# Price Difference 
+
+KNN_price_diff <- abs(sum(true_bean_price)-sum(KNN_predicted_price))
+KNN_price_diff
+# Sum of the price square error or price variance
+
+SSE_KNN = sum((KNN_true_bean_price-KNN_predicted_price)^2)
+
+# Printing Results
+cat("KNN Accuracy is:",KNN_Accr)
+cat(" , ")
+cat("Sum of squared errors for price:", SSE_KNN )
+
+```
+### Step 9 : MCLUSTDA 
+
+```{r}
+'Set seed'
+set.seed(123)
+
+#separate the predictors we will be using in the model
+mclustTrain <- bean_data_updated_train[ , c("Area","Extent","Eccentricity")] 
+mclustTest <- bean_data_updated_test[ , c("Area","Extent","Eccentricity")] 
+
+#separate the class variable from the training data
+mclustClass <- bean_data_updated_train[ , c("Class")]
+
+# Fitting the MclustDA Model using Eccentricity, Extent & Area Predictors with G= 1
+mclust.mod <- MclustDA(mclustTrain, mclustClass, G = 1)
+
+#Print summary
+summary(mclust.mod)
+
+# Predictions on test data
+
+MclustDA_pred <- predict.MclustDA(mclust.mod, newdata = mclustTest)
+true_values <- bean_data_updated_test$Class
+
+# Confusion Matrix of MclustDA model
+table(MclustDA_pred$class, bean_data_updated_test$Class)
+
+# Finding accuracy of MclustDA model
+
+MclustDA_accr <- mean(MclustDA_pred$class==bean_data_updated_test$Class)
+
+```
+
+
+Note: we tried to implement Mclust with group =2,3,4 & 5, but due to hours of processing time we were not able to succeed.We only implemented Mclust with Group = 1. 
+
+### Step 9 a: Cross validation of MClust model
+
+```{r}
+
+set.seed(1234)
+
+#subsetting the bean data to use the 4 variables
+bean.cv = bean_data_updated[ , c("Class", "Area","Extent","Eccentricity")] 
+bean.cv$Class = paste(bean_data_updated$Class)
+
+#head(bean.cv)
+
+#summary(bean.cv)
+
+#Cross Validation
+premut.cv = sample(1:3000, 3000)
+
+folds = cbind(sort(rep(seq(1, 10, 1), 301))[1:3000], premut.cv)
+
+accuracy = NULL
+
+for (i in 1:10)
+{
+    index.i = folds[folds[,1]==i, 2]
+    beanTest.i =  bean.cv[index.i,]
+    beanTrain.i = bean.cv[ - index.i,]
+    bean.dat = beanTrain.i[, -1]
+    class.dat = beanTrain.i[, 1]
+    mod.i = MclustDA(bean.dat, class.dat, G = 1)
+    results.i = cbind(paste(predict.MclustDA(mod.i, 
+                      newdata = beanTest.i[, -1])$classification),
+                      paste(beanTest.i[, 1]))
+    accuracy=c(accuracy,mean(results.i[, 1] == results.i[, 2]))
+}
+
+
+#Overall accuracy of the model 
+cat('10 fold cross validation accuracy:',(mean(accuracy)*100))
+
+```
+
+### Step9 b : Predicting the price, Weight & Sum of Square Errors on Price using the MclustDA Model with Eccentricity, Extent & Area 
+
+```{r}
+
+# Predicting Weights on test data
+
+MclustDA_predicted_weight <- data.frame(weight.per.bean[MclustDA_pred$class])
+
+MclustDA_Weight_diff <- abs(sum(true_bean_weight)-sum(MclustDA_predicted_weight))
+
+# Predicting the price on test data and then calculating the Sum of square error on price 
+
+MclustDA_predicted_price <- data.frame(price.per.bean[MclustDA_pred$class])
+MclustDA_Price_compare <- cbind(sum(MclustDA_predicted_price), sum(true_bean_price))
+MclustDA_Price_compare
+
+# Price Difference 
+
+MclustDA_price_diff <- abs(sum(true_bean_price)-sum(MclustDA_predicted_price))
+MclustDA_price_diff
+# Sum of the price square error or price variance
+
+SSE_MclustDA = sum((true_bean_price - MclustDA_predicted_price)^2)
+
+# Printing Results
+cat("MclustDA Accuracy is:",MclustDA_accr)
+cat(" , ")
+cat("Sum of squared errors for price:", SSE_MclustDA )
+
+```
+# Step 10 a: Comparison of true predicted values of beans by each model 
+```{r}
+# True predicted values of beans by LDA
+LDA_count <- rowSums(table(LDA_Predictions5, true_values))
+# True predicted values of beans by QDA
+QDA_count <- rowSums(table(QDA_predictions, true_values) )
+# True predicted values of beans by KNN
+Knn_count <- rowSums(table(knn_pred , test_labels))
+# True predicted values of beans by Mclust
+Mclust_count <- rowSums(table(MclustDA_pred$class, bean_data_updated_test$Class))
+
+# Results Printing 
+
+LDA_count
+QDA_count
+Knn_count
+Mclust_count
+
+```
+
+# Step 10: Creating table for final prediction: 
+
+## Bean test data results in the form of a table
+
+```{r}
+
+# Creating a Table for the final results from all the models
+
+Test_Model_Metrics <- data.frame(cbind(Models = c("LDA", "QDA", "kNN", "MClustDA"),
+                                       Accuracy                  = round(c(LDA_mdl5_Accr, qdamodel_Accr, KNN_Accr, MclustDA_accr),4),
+                                       True_Price                = round(c(sum(true_bean_price), sum(true_bean_price), sum(true_bean_price), sum(true_bean_price)),4),
+                                       Predicted_Price           = round(c(sum(LDA_predicted_price5), sum(QDA_predicted_price), sum(KNN_predicted_price),sum(MclustDA_predicted_price)),4),
+                                       Sum_of_Squared_Errors     = round(c(SSE_LDA5, SSE_QDA, SSE_KNN, SSE_MclustDA),5)))
+                                       
+kable(Test_Model_Metrics , caption = "Model Results Analysis Table")
+
+```
+According to the above models comparison results, QDA model has scored the lowest sum of squared cost value which selects it as the best model for this analysis.
+
+
+# Display Model Properties
+
+```{r}
+QDAmodel
+```
+Prior probabilities of groups illustrates that the percentage of each beans type in the training data set is about the same with a small increase for SIRA bean type.
+
+### Calculating price error by each bean type using the selected QDA model
+
+```{r}
+# Average Weight Per Bean
+avg.weight.per.bean <- 0.7
+
+# Price Per Bean
+price.per.bean
+
+# price per bean error using the QDA model 
+# (Weight difference/ average weight per bean)* price per bean
+
+# Bombay
+Bombay.QDA.price.error   <- (QDA_Weight_diff/ avg.weight.per.bean) * 0.023534807
+# CALI 
+CALI.QDA.price.error     <- (QDA_Weight_diff/ avg.weight.per.bean) * 0.008095822 
+# DERMASON
+DERMASON.QDA.price.error <- (QDA_Weight_diff/ avg.weight.per.bean) * 0.001222244
+# HOROZ
+HOROZ.QDA.price.error    <- (QDA_Weight_diff/ avg.weight.per.bean) * 0.002785763
+# SEKER
+SEKER.QDA.price.error    <- (QDA_Weight_diff/ avg.weight.per.bean) * 0.002938323
+# SIRA
+SIRA.QDA.price.error     <- (QDA_Weight_diff/ avg.weight.per.bean) * 0.004523889
+
+price.error <- data.frame(cbind(Models = c("BOMBAY", "CALI", "DERMASON", "HOROZ", "SEKER", "SIRA"),
+                                      Price.error.by.bean.type  = round(c(Bombay.QDA.price.error,CALI.QDA.price.error, DERMASON.QDA.price.error,HOROZ.QDA.price.error, SEKER.QDA.price.error, SIRA.QDA.price.error),4)))
+                                       
+kable(price.error , caption = "QDA Model Price Error By Each Bean Type")
+```
+## Creating a Automated function to calculate the price with the selected model
+
+```{r}
+
+# Building a function with two parameters
+auto_price_calc <- function(input_df, new_df){
+  
+  # Price per seed of six classes of beans
+  price.per.bean<- c( "BOMBAY"=((5.56*1.92)/453.592),
+                      "CALI"=((6.02*0.61)/453.592),
+                      "DERMASON"=((1.98*0.28)/453.592),
+                      "HOROZ"=((2.43*0.52)/453.592),
+                      "SEKER"=((2.72*0.49)/453.592),
+                      "SIRA"=((5.40*0.38)/453.592))
+  
+  # Weight per seed of six classes of beans
+  weight.per.bean <- c("BOMBAY"=(1.92),
+                       "CALI"=(0.61),
+                       "DERMASON"=(0.28),
+                       "HOROZ"=(0.52),
+                       "SEKER"=(0.49),
+                       "SIRA"=(0.38))
+  
+    set.seed(12345)
+    
+    
+#Create a seq column
+input_df$seq <- 1:nrow(input_df)
+ 
+#Set the training data set 	
+input_df_train <- input_df %>% dplyr::sample_frac(0.70)
+
+#Building the model using training data set
+qda_input_mdl <- qda(Class ~ Area +Eccentricity + Extent, data = input_df_train)
+
+# Get predictions using the new input data
+AUTO_QDA_pred <- predict(qda_input_mdl,new_df)
+
+#Add predicted_price column to new input data based on class predicted values
+new_df$predicted_price <- price.per.bean[AUTO_QDA_pred$class]
+
+# Set subset data from new input data with two variables (Class,predicted_price)
+sub_predicted <- new_df[,c("Class","predicted_price")]
+
+
+# Calculate beans price based on each bean type
+bean_price_group <- aggregate(sub_predicted$predicted_price,list(sub_predicted$Class),FUN=sum)
+
+# Display beans price
+bean_price_group
+
+}
+
+# Testing the function using the original beans data set split (70/30) between training and testing
+
+# Set training data set as original data set
+tr_df <- bean_data_updated[,-9]
+
+# Set testing data as new input data
+ts_df <- bean_data_updated_test[,-9]
+
+# Calling the function with the two input parameters.
+pred_price <- auto_price_calc(tr_df,ts_df)
+ 
+# Rename columns
+colnames(pred_price) <- c("Beans Type", "Total Predicted Price by Bean Type")
+ 
+# Display predicted Total cost by bean type
+pred_price
+
+
+```
+
+The results shows the estimated price for each bean type for the new submitted data set.
+
+***Reference:***
+
+1.	James, G., Witten, D., Hastie, T., & Tibshirani, R. (2021). An Introduction to Statistical Learning with Applications in R (2nd ed., p. 612). Springer. https://hastie.su.domains/ISLR2/ISLRv2_website.pdf
+2.	Wickham, H., Chang, W., & Henry, L. (n.d.). A box and whiskers plot (in the style of Tukey). ggplot2.tidyverse. Retrieved 10 March 2023, from https://ggplot2.tidyverse.org/reference/geom_boxplot.html
+3.	Statistics Globe (n.d.). Draw multiple Boxplots in one graph.statisticsglobe .Retrieved 10 March 2023, from https://statisticsglobe.com/draw-multiple-boxplots-in-one-graph-in-r
+4.	Wei, T., & Simko, V. (2021, November 18). An Introduction to corrplot Package. Cran.R-Project. Retrieved March 11, 2023, from https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html
+5.	Z. (2022, April 12). How to Split Data into Training & Test Sets in R. Statology. Retrieved March 11, 2023, from https://www.statology.org/train-test-split-r/
+6.	(n.d.). Associations between Variables. Codecademy. Retrieved March 11, 2023, from https://www.codecademy.com/learn/stats-associations-between-variables/modules/stats-associations-between-variables/cheatsheet
+7.	Z. (2020, October 30). Linear Discriminant Analysis in R (Step-by-Step). Statology. Retrieved March 11, 2023, from https://www.statology.org/linear-discriminant-analysis-in-r/
+8.	Sarkar, Priyankur. “What Is LDA: Linear Discriminant Analysis for Machine Learning.” What Is Linear Discriminant Analysis (LDA)?, Knowledgehut, 27 Dec. 2022, https://www.knowledgehut.com/blog/data-science/linear-discriminant-analysis-for-machine-learning. 
+9.	Z. (2020, November 2). Quadratic Discriminant Analysis in R (Step-by-Step). Statology. Retrieved March 12, 2023, from https://www.statology.org/quadratic-discriminant-analysis-in-r/
+10.	Saunders, C. (2023, February 10). Classification Part 2 LDA and QDA [Lecture]. D2l.Sdbor.edu. https://d2l.sdbor.edu/d2l/le/content/1781558/viewContent/11116132/View
+11.	D. (2020, June 22). K-NN Classifier in R Programming. Geeksforgeeks. Retrieved March 12, 2023, from https://www.geeksforgeeks.org/k-nn-classifier-in-r-programming/
+12.	“What Is the K-Nearest Neighbors Algorithm?” IBM, https://www.ibm.com/topics/knn. 
+13.	Saunders, C. (2023, February 10). Chapter 2 Section 2 Part 2 [Lecture]. D2l.Sdbor.edu. https://d2l.sdbor.edu/d2l/le/content/1781558/viewContent/11116058/View
+14.	Fraley, C., Raftery, A. E., & Scrucca, L. (n.d.). MclustDA discriminant analysis. Mclust-Org.Github. Retrieved March 13, 2023, from https://mclust-org.github.io/mclust/reference/MclustDA.html
+15.	shanem@mtu.edu, Shane T. Mueller. Model-Based Clustering and Mclust, 28 Mar. 2021, https://pages.mtu.edu/~shanem/psy5220/daily/Day19/modelbasedclustering.html#content. 
+16.	Saunders, C. (2023, February 24). MclustDA part1 [Lecture]. D2l.Sdbor.edu. https://d2l.sdbor.edu/d2l/le/content/1781558/viewContent/11116023/View
+17.	Saunders, C. (2023, February 24). MclustDA part2 [Lecture]. D2l.Sdbor.edu. https://d2l.sdbor.edu/d2l/le/content/1781558/viewContent/11116022/View
+18.	Saunders, C. (2023, February 24). MclustDA part3 Cross validation [Lecture]. D2l.Sdbor.edu. https://d2l.sdbor.edu/d2l/le/content/1781558/viewContent/11116024/View
+19.	Saunders, C. (2023, February 24). Mclust Play Part2 R file [Lecture]. D2l.Sdbor.edu. https://d2l.sdbor.edu/d2l/le/content/1781558/viewContent/11116026/View
+20.	Saunders, C. (2023, February 24). Mclust Play Part3 R file [Lecture]. D2l.Sdbor.edu. https://d2l.sdbor.edu/d2l/le/content/1781558/viewContent/11116025/View
+21.	The Carpentries (n.d.). Programming with R Creating Functions. Swcarpentry.Github. Retrieved March 14, 2023, from https://swcarpentry.github.io/r-novice-inflammation/02-func-R/
+22.	Chat.openai.com, https://chat.openai.com/. 
+
+
+
+
+
+
+
+
+
+
+
+
