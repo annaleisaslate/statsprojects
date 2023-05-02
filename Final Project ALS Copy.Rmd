@@ -1,0 +1,2173 @@
+---
+title: "STAT 602 Final Project"
+author: "Divanshu Mittal,Angela Rose,Jacob Liester,Anna Leisa Sauser & Hacene Salmi"
+date: "4/30/2023"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Final Practicum Part 1
+
+From the course syllabus-
+
+> The practicum will consist of an analysis that will require a 4-6 page formal write-up (not including appropriate graphical representations, figures, and tables, the annotated .rmd file will also need to be submitted). An oral presentation to the faculty associated with the Masters in Data Science degree, during which they will also be expected to answer questions on the core data science courses of Stat 600, 601, and 602. This oral presentation along with the formal write-up described above will satisfy the capstone experience for the Masters in Data Science and related degrees and certificates; even if the students choose to pursue them at a later date. Students may be randomly assigned to a final group of 2-6 students conditional on what degrees the students are currently pursuing. To pass the course students must receive a passing grade in the final group practicum (C or above).
+
+### The Problem
+
+From a personal communication from Dr. Jack Hietpas-
+
+> Small arms propellants (SAP) also known as canister powders are readily accessible and cost-effective materials that firearms enthusiasts can acquire for the legitimate assemble of ammunition. These attributes also make the these materials advantageous for the construction of improvised explosive devices (IEDs). For this project, 204 one-pound canisters of smokeless propellant (powder) were acquired from local and online sources. These samples represent nine manufacturers and 154 unique brands. From each brand a single sample of particles was collected and analyzed with a high-throughput, non-destructive, and low-cost quantitative automated image analysis routine that provided size measurements and four shape measurements.
+
+<https://honors.libraries.psu.edu/files/final_submissions/5878>
+
+Here is a reference from one of Dr. Hietpas' students.
+
+### Part 1
+
+Consider the setting where two IEDs are recovered. One has been recovered intact and a second has been exploded. From both IEDs a sample of SAP particles have been recovered.
+
+The investigators are interested in whether or not the two sets of SAP particles are from the same brand or two different brands. They are also interested in which brand(s) the SAP particles are from. Dr. Hietpas and Mr. Hasse suspect that the post-blast recovered sample will tend to have fewer smaller particles due to those particles being more easily consumed in the blast.
+
+### Data Resources
+
+For Part 1 of this project, you will be given the following data sets:
+
+1.  `train.csv`
+
+2.  `recovered.sample.1.csv`
+
+3.  `recovered.sample.2.csv`
+
+The first data set, `train.csv`, is a data set consisting of 39,944 rows and 11 columns. Each row of the `train.csv` corresponds to 1 SAP particle. The 11 columns of correspond to the features recorded for each particle and are as follows:
+
+1.  Distributor: The distributor of the brand of SAP.
+
+2.  Brand: The brand of the SAP, this is the main class variable of interest.
+
+3.  Shape: This is the claimed shape of the particles- this is determined by the Brand label and not determined by the measurement process.
+
+4.  Area: Area of selection in square pixels or in calibrated square units (e.g., mm^[2]{.underline}^, [μ]{.underline}m^[2]{.underline}^, etc.).
+
+5.  Perim.: The length of the outside boundary of the selection. Uses the heading **Perim.** with Version IJ 1.44f and later, the perimeter of a composite selection is calculated by decomposing it into individual sections. Note that the composite perimeter and the sum of the individual perimeters may be different due to use of different calculation methods.
+
+6.  ***Fit Ellipse Feature Set-*** The Ellipse Fits command fits an ellipse to the selection.
+
+    1.  Major: Major is the primary axis of the best fitting ellipse.
+
+    2.  Minor: Minor is the secondary axis of the best fitting ellipse.
+
+7.  ***Shape Descriptors***
+
+    1.  Circularity (Circ.): $4\pi \frac{Area}{Perimeter^2}$ with a value of one indicating a perfect circle. As the value approaches 0, it indicates an increasingly elongated shape. Values may not be valid for very small particles.
+
+    2.  Aspect ratio (AR): The aspect ratio of the particle's fitted ellipse, i.e., $\frac{Major\  Axis}{Minor\ Axis}$.
+
+    3.  Roundness (Round): The inverse of the Aspect Ratio.
+
+    4.  Solidity: $\frac{Area}{Convex\ Area}$
+
+The second and third data sets only contain the features from the ImageJ software, namely:
+
+1.  "Area"
+
+2.  "Perim."
+
+3.  "Major"
+
+4.  "Minor"
+
+5.  "Circ."
+
+6.  "AR"
+
+7.  "Round"
+
+8.  "Solidity"
+
+The second data set contains the observations from the recovered unexploded IED and is labeled recovered.sample.1.csv. This dataset has 613 particles (only a representative sample of the particles recovered).
+
+The third data set contains the observations from the recovered exploded IED and is labeled recovered.sample.2.csv. This dataset has 273 particles (all of the particles that were recovered).
+
+#### Features and Image extraction methods are described in greater detail in these two references
+
+[https://imagej.nih.gov/ij/docs/guide/146-30.html#sub:Set-Measurements...](https://imagej.nih.gov/ij/docs/guide/146-30.html#sub:Set-Measurements…)
+
+Schindelin, J., Arganda-Carreras, I., Frise, E., Kaynig, V., Longair, M., Pietzsch, T., Preibisch, S., Rueden, C., Saalfeld, S., Schmid, B. and Tinevez, J.Y., 2012. Fiji: an open-source platform for biological-image analysis. *Nature methods*, *9*(7), pp.676-682.
+
+## Further Steps, Evaluation, and Grading
+
+### Further Steps/Tasks
+
+Over the remainder of the class, I will provide additional sets of particles that you will need to analyze and present a solution to addressing questions of interest.
+
+> Your grade will be determined by the following components:
+
+1.  Your PowerPoint slides presentation on your approach, summarizing your recommendations, and conclusions. This will be the main component of your grade and presented during finals week to faculty and researchers associated with the data science and analytics programs.
+
+2.  The white paper, with the methods you have used in building your classifiers/methods.
+
+    i)  You should use multiple classification methods and inference techniques; also provide documentation on implementation and construction of each methodology.
+
+    ii) YOU NEED TO PROVIDE DISCUSSION ON HOW YOU DETERMINED ACCURACY AND/OR ERRORS FOR EACH PROBLEM AND TASKING.
+
+You will need to turn in the following three components:
+
+-   An annotated R-script/rmd that replicates your analysis for each problem.
+-   A write-up summarizing the methods. (White paper approximately 2 pages of written text per problem. Tables and plots do not count towards the total page count but put tables/figures at the end of the write-up and reference forward to them.)
+-   A PowerPoint presentation discussing the work you have done on the project. (Including the following: introduce and review the problems/tasks; discuss the resources you have used to solve the problem; present the algorithms and methods you used to solve the problems/tasks; and your solutions/predictions with their corresponding accuracy.)
+
+> Do ask me (or the GTAs) for help if you are having trouble.
+
+> Beware this is a rather open ended question.
+
+> Start early. Get something that works then come back and build up a better solution.
+
+Good Luck
+
+-cps
+
+```{r   setup, include=FALSE }
+knitr::opts_chunk$set(echo = F,warning=F,message=F)
+```
+
+#Importing Libraries
+
+```{r}
+#Installing required packages and loading libraries
+
+library(ggplot2)
+library(GGally)
+library(MASS)
+library(class)
+library(mclust)
+library(knitr)
+library(dplyr)
+library(gridExtra)
+library(scales)
+library(corrplot)
+library(e1071)
+library(psych)
+library(stats)
+library(nnet)
+library(randomForest)
+```
+
+### Step1 : Loading the given train data, Missing values Check, Summary of the data & Vizually checking the data.
+
+```{r}
+#Reading input data file
+sap.train <- read.csv('train.csv', header=TRUE, stringsAsFactor = TRUE)
+
+# Removing the index variable x.
+sap.train <- sap.train[,-1]
+
+# Checking dataset format
+str(sap.train) 
+
+# Missing Value check in the data 
+sum(is.na(sap.train))
+
+#Summary of data
+summary(sap.train)
+
+```
+
+Based on the summary output, we can see that the data set consists of 39944 observations and 12 variables distributed as three categorical variables of type factor and eight numeric variables. The data has no missing values, and it contains nine unique distributors, 154 unique brands, and four unique shapes. For data cleaning, we removed the index variable (x).
+
+### Sub-setting input data based on Shape variable for exploratory data analysis on brands with in a Shape. Since there are 154 brands it will be hard to do exploratory data analysis on brands in one step, so we divided the brands by shape and explore the measurements of the brand with in that particular Shape.
+
+```{r}
+# Creating sub-data sets 
+st1 <- subset(sap.train,Shape=="cylindrical")
+st2 <- subset(sap.train,Shape=="flake")
+st3 <- subset(sap.train,Shape=="flattened_spherical")
+st4 <- subset(sap.train,Shape=="spherical")
+
+# Displaying sub-data sets dimensions
+dim(st1)
+dim(st2)
+dim(st3)
+dim(st4)
+
+```
+
+### Step2 a: Exploratory Data Analysis for sap.train data
+
+### Exploring the data using Box plots.
+
+### Barplot of unique brands within a Shape ( Shape Vs Brand Analysis)
+
+```{r}
+
+# Set Shape types values
+Shape_Type <- c("cylindrical","flake","flattened_spherical","spherical")
+
+# Get the unique Brands values used by each Shape
+unique_brands_value <- c(length(unique(st1$Brand)),length(unique(st2$Brand)),length(unique(st3$Brand)),length(unique(st4$Brand)))
+
+# Set the dataframe
+brands_per_shapes <- data.frame(Shape_Type,unique_brands_value)
+
+# Plotting the unique Brands used by each Shape
+
+ggplot(data=brands_per_shapes, aes(x=Shape_Type, y=unique_brands_value, fill=Shape_Type)) + 
+geom_bar(position = 'dodge', stat='identity') +
+geom_text(aes(label=unique_brands_value), position=position_dodge(width=0.9), vjust=-0.25)+
+ggtitle("Unique Brands values per Shape")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+The above bar plot shows that the unique brand values belongs to cylindrical and flattened_spherical shapes is greater than flake and spherical.
+
+
+
+### Step2b: Box Plots of Measurements of brands within a Shape.
+
+```{r}
+# Box plots to show distributions of  Response variable vs numeric Predictors.
+
+ggplot(sap.train, aes(x = Shape, y = Area  , color = Shape)) + geom_boxplot() + ggtitle("Shape VS Area")
+ggplot(sap.train, aes(x = Shape, y = Perim., color = Shape)) + geom_boxplot() + ggtitle("Shape VS Perim.")
+ggplot(sap.train, aes(x = Shape, y = Major , color = Shape)) + geom_boxplot() + ggtitle("Shape VS Major")
+ggplot(sap.train, aes(x = Shape, y = Minor, color = Shape)) + geom_boxplot() + ggtitle("Shape VS Minor")
+ggplot(sap.train, aes(x = Shape, y = Circ., color = Shape)) + geom_boxplot() + ggtitle("Shape VS Circ.")
+ggplot(sap.train, aes(x = Shape, y = AR, color = Shape)) + geom_boxplot() + ggtitle("Shape VS AR")
+ggplot(sap.train, aes(x = Shape, y = Round, color = Shape)) + geom_boxplot() + ggtitle("Shape VS Round")
+ggplot(sap.train, aes(x = Shape, y = Solidity, color = Shape)) + geom_boxplot() + ggtitle("Shape VS Solidity")
+
+
+```
+
+From the above box plots, we can see there are numerous outliers in the data. For the most part there is not much separation in the box plots which shows that there is stronger association with the class variable Shape except for the two predictors Major and Minor which shows good amount of separation among shapes categories .
+
+### Step 3- Hypothesis Testing
+
+### Importing the four recovered samples.
+
+```{r}
+# Recovered Sample1 
+recovered.sample1 <- read.csv("recovered.sample.1.csv", header=TRUE, stringsAsFactor = TRUE)
+# Recovered Sample2
+recovered.sample2 <- read.csv("recovered.sample.2.csv", header=TRUE, stringsAsFactor = TRUE)
+# Recovered Sample3
+recovered.sample3 <- read.csv("recovered.sample.3.csv", header=TRUE, stringsAsFactor = TRUE)
+# Recovered Sample4
+recovered.sample4 <- read.csv("recovered.sample.4.csv", header=TRUE, stringsAsFactor = TRUE)
+```
+
+### Analyzing Samples 1 & 2
+
+### Summary of Exploration of Area Variable
+
+Running both ANOVA and Kruskal-Wallis, and having low values for both in this case, helps strengthen the case that there is evidence of difference between groups. The evidence against the null hypothesis is strong.
+
+ANOVA p-value: 3.39e-15 Kruskal-Wallis p-value: 2.2e-16
+
+Differences between the p-values exist because of the different mathematical components of ANOVA v. Kruskal-Wallis, but similar p-values with both tests helps strengthen our case.
+
+We used Tukey Honestly Significant Difference test after ANOVA to compare the means of all the possible pairs of groups to determine which are significantly different from one another. It controls the family-wise error rate, which is the probability of making at least one type 1 error across the pairwise comparisons.
+
+For Area, the Tukey results tell us that there is a statistically significant difference between the means of group 2 and group 1, with group 2 having a higher mean than group 1. We can see this echoed in the box plot.
+
+We also used Dunn's test, as a follow up to our Kruskal-Wallis analysis. Dunn's test has a similar goal of comparing all possible pairs of groups and determining which pairs are significantly different from each other. We used the Holm-Bonferroni correction to adjust the p-values. Again, a very significant difference is shown between group 1 and group 2, and the test is highly significant. (See line 15)
+
+### Summary of Exploration of Perimeter Variable
+
+Similar to Area, Perimeter has low p-value and our subsequent analyses show significant differences between the two groups.
+
+ANOVA p-value: 3.39e-15 Kruskal-Wallis p-value: 2.2e-16
+
+The difference between those two groups are clearly shown in the boxplot, as well.
+
+### Summary of Exploration of Major Variable
+
+In the case of Major, the difference between the two groups is less, but still statistically significant. ANOVA p-value: 9.09e-11 Kruskal Wallis p-value: p-value = 1.297e-15
+
+In this case, the Turkey results confirm that the mean in sample 2 is higher than in sample 1, with a difference of 56.26 units and a 95% confidence interval.
+
+And our Dunn's test results confirm sample 2's mean is different from sample 1, with a small p-value and evidence against the null hypothesis.
+
+### Summary of Minor Variable
+
+Again, both tests show extremely low p-values.
+
+ANOVA p-value: 5.95e-09 Kruskal-Wallis: 1.197e-13
+
+Our Tukey and Dunn's tests tell us there are statistical differences between the means. Though we can see on the boxplot there are more outliers in this variable.
+
+### Summary of Circ. Variable
+
+Similar to all our tests so far, we find low p-values (in general, values below 0.05 are considered statistically significant) and statistical differences between the means of the two samples. So far, all of these variables are usable and useful.
+
+ANOVA: 0.0294 Kruskal: 0.0003183
+
+### Summary of AR Variable
+
+In the case of AR, there is not enough evidence to reject the null hypothesis that the means of the groups are equal. We cannot find significant enough differences between samples 1 and 2 to consider them statistically significant.
+
+### Summary of Round Variable
+
+As with AR, the differences between the two sample groups are not significant enough to be statistically meaningful.
+
+### Summary of Solidity Variable
+
+As with AR and Round, the Solidity variable between to the two groups are too similar to be meaningful or useful for our analysis.
+
+### Analysis Step 1: Visual inspection of one dataset, getting a "lay of the land," so to speak.
+
+```{r}
+View(recovered.sample1)
+```
+
+### Creating own samples to not interfere with analysis already done.
+
+```{r}
+alsample1<-recovered.sample1
+alsample2<-recovered.sample2
+alsample3<-recovered.sample3
+alsample4<-recovered.sample4
+```
+
+### First step:
+
+Explore and compare samples 1 and 2. Visual inspection of histograms to understand the basic shape of the data. Use of both ANOVA for normal data, and use of Kruskal-Wallis for skewed data.
+
+### Looking at Area in samples 1 and 2.
+
+### Histograms of Area
+
+```{r}
+# Histograms of Area
+par(mfrow = c(2, 2))
+hist(alsample1$Area)
+hist(alsample2$Area)
+```
+
+### Creating a Group Variable
+
+```{r}
+alsample1$sample<-1
+alsample2$sample<-2
+alsample3$sample<-3
+alsample4$sample<-4
+```
+
+Grouping samples 1 and 2 to compare the two datasets to one another.
+
+```{r}
+groupeddata1<-rbind(alsample1, alsample2)
+```
+
+```{r}
+groupeddata1$sample<-as.factor(groupeddata1$sample)
+```
+
+Checking to validate that bind worked for samples 1 and 2.
+
+```{r}
+#View(groupeddata1)
+```
+
+### Anova Test
+
+```{r}
+# Anova Test 
+
+myanova1<-aov(Area ~sample, groupeddata1)
+summary(myanova1)
+```
+
+ANOVA shows us the p-value is less than .001, which means there is a significant statistical difference in the average area between the samples. Running Kruskal-Wallis below to verify findings of ANOVA in the case that the data might be skewed.
+
+### Kruskal Test
+
+```{r}
+# Kruskal Test 
+mykruskal1<-kruskal.test(Area ~sample, groupeddata1)
+mykruskal1
+```
+
+Both ANOVA and Kruskal show very low p-values.
+
+Next, we are running pair-wise analysis and then for Kruskal-Wallis for ANOVA to see which samples areas are significantly different.
+
+```{r}
+TukeyHSD(myanova1)
+```
+
+### Box Plot of Area Vs Sample
+
+```{r}
+boxplot(Area ~sample, groupeddata1)
+```
+
+```{r}
+#load library
+#install.packages("FSA")
+library(FSA)
+#perform Dunn's Test with Bonferroni correction for p-values
+dunnTest(Area ~ sample,
+         data=groupeddata1,
+         method="bonferroni")
+```
+
+Above, p.adj is the adjusted value for the Bonferroni method, which multiplies the p-value by the number of tests you're doing. This helps when you're doing multiple tests, because they're more likely to make a Type 1 error and reject a null when we should not.
+
+### Repeating the above analysis for Perimeter in samples 1 and 2.
+
+### Histograms of Perim.
+
+```{r}
+# Histograms of Perim.
+
+par(mfrow = c(2, 2))
+hist(alsample1$Perim.)
+hist(alsample2$Perim.)
+```
+
+### Anova test
+
+```{r}
+# Anova Test 
+myanova2<-aov(Perim. ~sample, groupeddata1)
+summary(myanova2)
+```
+
+Again, very low p-value. Check with Kruskal-Wallis in case the data is skewed, which is visually apparent in sample 2 for Perimeter.
+
+### Kruskal Test
+
+```{r}
+# Kruskal Test
+mykruskal2<-kruskal.test(Perim. ~sample, groupeddata1)
+mykruskal2
+```
+
+```{r}
+TukeyHSD(myanova2)
+```
+
+### Box Plot of Perim. Vs Sample
+
+```{r}
+boxplot(Perim. ~sample, groupeddata1)
+```
+
+```{r}
+dunnTest(Perim. ~ sample,
+         data=groupeddata1,
+         method="bonferroni")
+```
+
+Again, p-values are low, meaning each has a different perimeter and is individually significant.
+
+### Looking at Major variable next.
+
+### Histograms of Major
+
+```{r}
+# Histograms of Major
+
+par(mfrow = c(2, 2))
+hist(alsample1$Major)
+hist(alsample2$Major)
+```
+
+### Anova Test
+
+```{r}
+# Anova Test 
+myanova3<-aov(Major ~sample, groupeddata1)
+summary(myanova3)
+```
+
+### Kruskal Test
+
+```{r}
+# Kruskal Test
+mykruskal3<-kruskal.test(Major ~sample, groupeddata1)
+mykruskal3
+```
+
+```{r}
+TukeyHSD(myanova3)
+```
+
+### Box Plot of Major Vs Sample
+
+```{r}
+boxplot(Major ~sample, groupeddata1)
+```
+
+```{r}
+dunnTest(Major ~ sample,
+         data=groupeddata1,
+         method="bonferroni")
+```
+
+### Next, looking at the Minor variable in samples 1 and 2.
+
+### Histograms of Minor
+
+```{r}
+# Histograms of Minor
+
+par(mfrow = c(2, 2))
+hist(alsample1$Minor)
+hist(alsample2$Minor)
+```
+
+### Anova Test
+
+```{r}
+### Anova Test
+myanova4<-aov(Minor ~sample, groupeddata1)
+summary(myanova4)
+```
+
+### kruskal Test
+
+```{r}
+# kruskal Test 
+mykruskal4<-kruskal.test(Minor ~sample, groupeddata1)
+mykruskal4
+```
+
+```{r}
+TukeyHSD(myanova4)
+```
+
+### Box plot of Minor Vs Sample
+
+```{r}
+boxplot(Minor ~sample, groupeddata1)
+```
+
+```{r}
+dunnTest(Minor ~ sample,
+         data=groupeddata1,
+         method="bonferroni")
+```
+
+### Exploring the Circumference variable for samples 1 and 2.
+
+### Histograms of Circ.
+
+```{r}
+# Histograms of Circ.
+par(mfrow = c(2, 2))
+hist(alsample1$Circ.)
+hist(alsample2$Circ.)
+```
+
+### Anova Test
+
+```{r}
+### Anova Test
+myanova5<-aov(Circ. ~sample, groupeddata1)
+summary(myanova5)
+```
+
+### Kruskal test
+
+```{r}
+# Kruskal test
+mykruskal5<-kruskal.test(Circ. ~sample, groupeddata1)
+mykruskal5
+```
+
+### Box Plot of Circ. Vs Sample
+
+```{r}
+boxplot(Circ. ~sample, groupeddata1)
+```
+
+```{r}
+dunnTest(Circ. ~ sample,
+         data=groupeddata1,
+         method="bonferroni")
+```
+
+### Looking at AR variable in samples 1 and 2.
+
+### Histograms of AR
+
+```{r}
+# Histograms of AR
+par(mfrow = c(2, 2))
+hist(alsample1$AR)
+hist(alsample2$AR)
+```
+
+### Anova Test
+
+```{r}
+# Anova Test
+myanova6<-aov(AR ~sample, groupeddata1)
+summary(myanova6)
+```
+
+### Kruskal Test
+
+```{r}
+# Kruskal Test
+mykruskal6<-kruskal.test(AR ~sample, groupeddata1)
+mykruskal6
+```
+
+```{r}
+TukeyHSD(myanova6)
+```
+
+### Box Plot of AR vs Sample
+
+```{r}
+boxplot(AR ~sample, groupeddata1)
+```
+
+```{r}
+dunnTest(AR ~ sample,
+         data=groupeddata1,
+         method="bonferroni")
+```
+
+### Looking at Round variable in samples 1 and 2. 
+
+### Histograms of Round
+
+```{r}
+# Histograms of Round
+par(mfrow = c(2, 2))
+hist(alsample1$Round)
+hist(alsample2$Round)
+```
+
+### Anova Test
+
+```{r}
+# Anova Test 
+myanova7<-aov(Round ~sample, groupeddata1)
+summary(myanova7)
+```
+
+### Kruskal Test
+
+```{r}
+# Kruskal Test
+mykruskal7<-kruskal.test(Round ~sample, groupeddata1)
+mykruskal7
+```
+
+```{r}
+TukeyHSD(myanova7)
+```
+
+### Box plot of Round Vs Sample
+
+```{r}
+boxplot(Round ~sample, groupeddata1)
+```
+
+```{r}
+dunnTest(Round ~ sample,
+         data=groupeddata1,
+         method="bonferroni")
+```
+
+### Looking at Solidity in samples 1 and 2.
+
+### Histograms of Solidity
+
+```{r}
+# Histograms of Solidity
+par(mfrow = c(2, 2))
+hist(alsample1$Solidity)
+hist(alsample2$Solidity)
+```
+
+### Anova Test
+
+```{r}
+# Anova Test
+myanova8<-aov(Solidity ~sample, groupeddata1)
+summary(myanova8)
+```
+
+### Kruskal Test
+
+```{r}
+# Kruskal Test
+mykruskal8<-kruskal.test(Solidity ~sample, groupeddata1)
+mykruskal8
+```
+
+```{r}
+TukeyHSD(myanova8)
+```
+
+### Box Plot of Solidity Vs Sample
+
+```{r}
+boxplot(Solidity ~sample, groupeddata1)
+```
+
+```{r}
+dunnTest(Solidity ~ sample,
+         data=groupeddata1,
+         method="bonferroni")
+```
+
+### Lastly in the exploratory process, repeat the same procedures (histograms, ANOVA and Kruskal-Wallis) for variables in samples 3 and 4.
+
+Grouping data in samples 3 and 4.
+
+```{r}
+groupeddata2<-rbind(alsample3, alsample4)
+```
+
+```{r}
+groupeddata2$sample<-as.factor(groupeddata2$sample)
+```
+
+Checking to validate that bind worked for samples 3 and 4.
+
+```{r}
+#View(groupeddata2)
+```
+
+Samples 3&4
+
+### Summary of Exploration of Area Variable
+
+Our tests show statistically significant differences between the two groups, and low p-values for Area. Data is more skewed, so relying on Kruskal more than ANOVA.
+
+ANOVA p-value: 2e-16 Kruskal p-value: 6.689e-05
+
+### Summary of Exploration of Perim. Variable
+
+Low p-values and statistically significant differences in the Perim. variable confirms these are valuable for analysis between samples 3 and 4. Data is skewed, so looking at Kruskal value here.
+
+ANOVA p-value: 2e-16 Kruskal p-value: 4.06e-05
+
+### Summary of Exploration of Major Variable
+
+As with our other values in samples 3 and 4 groups so far, there are low p-values and significant differences between the two groups.
+
+ANOVA p-value: 2e-16 Kruskal p-value: 3.09e-05
+
+### Summary of Exploration of Minor Variable
+
+Low p-values and significant differences between the means of each group when looking at the minor variable.
+
+ANOVA p-value: 3.38e-16 Kruskal p-value: 0.0003214
+
+### Summary of Exploration of Circ. Variable
+
+The data looks skewed in both samples, so we will lean on Kruskal and Dunn's analysis here. Again, low p-values and significant differences between the means make this variable useful for analysis.
+
+ANOVA p-value: 2e-16 Kruskal: 3.388e-07
+
+### Summary of Exploration of AR Variable
+
+Low p-values and differences between the means make this variable significant.
+
+ANOVA p-value: 2e-16 Kruskal: 2e-16
+
+### Summary of Exploration of Round Variable
+
+Both sample group variables look skewed, but our analysis gives us low p-values and statistically different means between the samples.
+
+ANOVA p-value: 2e-16 Kruskal: 2e-16
+
+### Summary of Exploration of Solidity Variable
+
+As with the other values, significant differences between the groups and low p-values.
+
+ANOVA p-value: 6.05e-14 Kruskal: 2.2e-16
+
+### Area in samples 3 and 4.
+
+### Histograms of Area
+
+```{r}
+# Histograms of Area
+par(mfrow = c(2, 2))
+hist(alsample3$Area)
+hist(alsample4$Area)
+```
+
+### Anova Test
+
+```{r}
+# Anova Test
+myanova9<-aov(Area ~sample, groupeddata2)
+summary(myanova9)
+```
+
+### Kruskal Test
+
+```{r}
+# Kruskal Test
+mykruskal9<-kruskal.test(Area ~sample, groupeddata2)
+mykruskal9
+```
+
+```{r}
+TukeyHSD(myanova9)
+```
+
+### Box Plot of Area Vs Sample
+
+```{r}
+boxplot(Area ~sample, groupeddata2)
+```
+
+```{r}
+dunnTest(Area ~ sample,
+         data=groupeddata2,
+         method="bonferroni")
+```
+
+### Perim. in samples 3 and 4.
+
+### Histograms of Perim.
+
+```{r}
+### Histograms of Perim.
+par(mfrow = c(2, 2))
+hist(alsample3$Perim.)
+hist(alsample4$Perim.)
+```
+
+### Anova Test
+
+```{r}
+### Anova Test
+myanova9<-aov(Perim. ~sample, groupeddata2)
+summary(myanova9)
+```
+
+### Kruskal Test
+
+```{r}
+### Kruskal Test
+mykruskal9<-kruskal.test(Perim. ~sample, groupeddata2)
+mykruskal9
+```
+
+```{r}
+TukeyHSD(myanova9)
+```
+
+### Box Plot of Perim. Vs Sample
+
+```{r}
+boxplot(Perim. ~sample, groupeddata2)
+```
+
+```{r}
+dunnTest(Perim. ~ sample,
+         data=groupeddata2,
+         method="bonferroni")
+```
+
+### Major variable in samples 3 and 4.
+
+### Histograms of Major
+
+```{r}
+### Histograms of Major
+par(mfrow = c(2, 2))
+hist(alsample3$Major)
+hist(alsample4$Major)
+```
+
+### Anova Test
+
+```{r}
+### Anova Test
+myanova10<-aov(Major ~sample, groupeddata2)
+summary(myanova10)
+```
+
+### Kruskal Test
+
+```{r}
+### Kruskal Test
+mykruskal10<-kruskal.test(Major ~sample, groupeddata2)
+mykruskal10
+```
+
+```{r}
+TukeyHSD(myanova10)
+```
+
+### Box Plot of Major Vs Sample
+
+```{r}
+boxplot(Major ~sample, groupeddata2)
+```
+
+```{r}
+dunnTest(Major ~ sample,
+         data=groupeddata2,
+         method="bonferroni")
+```
+
+### Minor variable in samples 3 and 4.
+
+### Histograms of Minor
+
+```{r}
+### Histograms of Minor
+par(mfrow = c(2, 2))
+hist(alsample3$Minor)
+hist(alsample4$Minor)
+```
+
+### Anova Test
+
+```{r}
+### Anova Test
+myanova11<-aov(Minor ~sample, groupeddata2)
+summary(myanova11)
+```
+
+### Kruskal Test
+
+```{r}
+### Kruskal Test
+mykruskal11<-kruskal.test(Minor ~sample, groupeddata2)
+mykruskal11
+```
+
+```{r}
+TukeyHSD(myanova11)
+```
+
+### Box Plot of Minor Vs Sample
+
+```{r}
+boxplot(Minor ~sample, groupeddata2)
+```
+
+```{r}
+dunnTest(Minor ~ sample,
+         data=groupeddata2,
+         method="bonferroni")
+```
+
+### Circumference variable in samples 3 and 4.
+
+### Histograms of Circumference
+
+```{r}
+### Histograms of Circumference
+par(mfrow = c(2, 2))
+hist(alsample3$Circ.)
+hist(alsample4$Circ.)
+```
+
+### Anova Test
+
+```{r}
+### Anova Test
+myanova12<-aov(Circ. ~sample, groupeddata2)
+summary(myanova12)
+```
+
+### Kruskal Test
+
+```{r}
+### Kruskal Test
+mykruskal12<-kruskal.test(Circ. ~sample, groupeddata2)
+mykruskal12
+```
+
+```{r}
+TukeyHSD(myanova12)
+```
+
+### Box Plot of Circ. Vs Sample
+
+```{r}
+boxplot(Circ. ~sample, groupeddata2)
+```
+
+```{r}
+dunnTest(Circ. ~ sample,
+         data=groupeddata2,
+         method="bonferroni")
+```
+
+### AR variable in samples 3 and 4.
+
+### Histograms of AR
+
+```{r}
+### Histograms of AR
+par(mfrow = c(2, 2))
+hist(alsample3$AR)
+hist(alsample4$AR)
+```
+
+### Anova Test
+
+```{r}
+### Anova Test
+myanova13<-aov(AR ~sample, groupeddata2)
+summary(myanova13)
+```
+
+### Kruskal Test
+
+```{r}
+### Kruskal Test
+mykruskal13<-kruskal.test(AR ~sample, groupeddata2)
+mykruskal13
+```
+
+```{r}
+TukeyHSD(myanova13)
+```
+
+### Box Plot of AR Vs Sample
+
+```{r}
+boxplot(AR ~sample, groupeddata2)
+```
+
+```{r}
+dunnTest(AR ~ sample,
+         data=groupeddata2,
+         method="bonferroni")
+```
+
+### Round variable in samples 3 and 4.
+
+### Histograms of Round
+
+```{r}
+### Histograms of Round
+par(mfrow = c(2, 2))
+hist(alsample3$Round)
+hist(alsample4$Round)
+```
+
+### Anova Test
+
+```{r}
+### Anova Test
+myanova14<-aov(Round ~sample, groupeddata2)
+summary(myanova14)
+```
+
+### Kruskal Test
+
+```{r}
+### Kruskal Test
+mykruskal14<-kruskal.test(Round ~sample, groupeddata2)
+mykruskal14
+```
+
+```{r}
+TukeyHSD(myanova14)
+```
+
+### Box Plot of Round Vs Sample
+
+```{r}
+boxplot(Round  ~sample, groupeddata2)
+```
+
+```{r}
+dunnTest(Round ~ sample,
+         data=groupeddata2,
+         method="bonferroni")
+```
+
+### Solidity variable in samples 3 and 4.
+
+### Histograms of Solidity
+
+```{r}
+### Histograms of Solidity
+par(mfrow = c(2, 2))
+hist(alsample3$Solidity)
+hist(alsample4$Solidity)
+```
+
+### Anova Test
+
+```{r}
+### Anova Test
+myanova15<-aov(Solidity ~sample, groupeddata2)
+summary(myanova15)
+```
+
+### Kruskal Test
+
+```{r}
+### Kruskal Test
+mykruskal15<-kruskal.test(Solidity ~sample, groupeddata2)
+mykruskal15
+```
+
+```{r}
+TukeyHSD(myanova15)
+```
+
+### Box Plot of Solidity Vs Sample
+
+```{r}
+boxplot(Solidity ~sample, groupeddata2)
+```
+
+```{r}
+dunnTest(Solidity ~ sample,
+         data=groupeddata2,
+         method="bonferroni")
+```
+
+### Step4 Splitting the data set(70,30) based on the Brand Variable in to training and testing data.
+
+```{r}
+# splitting the data into train and test set 
+
+# Set the seed
+set.seed(1234)
+
+#Get the brands values
+brand_list <- unique(sap.train$Brand)
+
+#Set the brands values as a list
+levels = levels(brand_list)
+
+#Creating an empty dataframe for training sub-dataset with required columns names
+training_dt <- data.frame(matrix(ncol = 13, nrow = 0))
+
+# Set columns names  for training data set 
+colnames(training_dt) <- colnames(sap.train)
+#Adding seq column to training data set
+colnames(training_dt)[13]="seq"
+
+#Creating an empty data frame for test sub-data set with required columns names
+testing_dt <- data.frame(matrix(ncol = 13, nrow = 0))
+# Set columns names  for test data set 
+colnames(testing_dt) <- colnames(sap.train)
+#Adding seq column to test data set
+colnames(testing_dt)[13]="seq"
+ 
+# Creating training and test data sets based on the brands list
+for(i in 1:length(levels)){
+  
+ #Subset based on the brand list index i
+ df_brand <- subset(sap.train,Brand== levels[i] )
+
+ df_brand$seq <- 1:nrow(df_brand)
+
+# Get 70% as sub-training data
+ gl_data_train <- df_brand %>% dplyr::sample_frac(0.70)
+ 
+ # Combining the sub-training datasets
+ training_dt <-rbind(training_dt, gl_data_train)
+
+ # Get the 30% as sub-testing data
+ gl_data_test  <- dplyr::anti_join(df_brand, gl_data_train , by = 'seq')
+ 
+ # Combining the sub-testing datasets
+ testing_dt <-rbind(testing_dt, gl_data_test)
+}
+
+#Removing seq variable from training & testing 
+training_dt <- training_dt[,-12]
+testing_dt <- testing_dt[,-12]
+
+#Displaying training and testing datasets dimensions
+dim(training_dt)
+dim(testing_dt)
+
+# acc_testing_dt <- testing_dt
+# fl_testing_df <- testing_dt
+
+```
+
+The training data set has 27957 records, and the testing data has 11987.
+
+#### Step4: Creating a validation data set to hyper-tune the parameters to select the best classifier.
+
+```{r}
+# Creating a validation set
+
+# Set the seed
+set.seed(1234)
+
+#Creating an empty dataframe for splitting the data  with required columns names
+train_dt_va <- data.frame(matrix(ncol = 13, nrow = 0))
+
+# Set columns names  for the data set 
+colnames(train_dt_va) <- colnames(testing_dt)
+#Adding seq column to the data set
+colnames(train_dt_va)[13]="seq"
+
+#Creating an empty data frame for validation sub-data set with required columns names
+validation_dt <- data.frame(matrix(ncol = 13, nrow = 0))
+# Set columns names  for validation data set 
+colnames(validation_dt) <- colnames(sap.train)
+#Adding seq column to validation data set
+colnames(validation_dt)[13]="seq"
+ 
+# Creating the validation data  based on the brands list
+for(i in 1:length(levels)){
+  
+ #Subset based on the brand list index i
+ df_brand <- subset(testing_dt ,Brand== levels[i] )
+
+ df_brand$seq <- 1:nrow(df_brand)
+
+# Get 80% as sub-training data
+ gl_data_train <- df_brand %>% dplyr::sample_frac(0.80)
+ 
+ # Combining the sub-training datasets
+ train_dt_va <-rbind(train_dt_va, gl_data_train)
+
+ # Get the 20% as sub-validation data
+ gl_data_test  <- dplyr::anti_join(df_brand, gl_data_train , by = 'seq')
+ 
+ # Combining the sub-validation datasets
+ validation_dt <-rbind(validation_dt, gl_data_test)
+}
+
+#Removing seq variable from training, validation and test datasets
+validation_dt <- validation_dt [,-12]
+
+# Checking the data 
+
+dim(validation_dt)
+
+```
+
+The validation data is a subset of test data and has 2393 records.
+
+### Step 5: Creating the Model to Predict Brands
+
+### Approach taken : Since the response variable has more than two classes, we chose LDA for variable selection based on the best accuracy observed. Since the predictors have lot of similar characters, we took a approach to add variable interactions and transformations to LDA model to increase the accuracy and find the best model. We tested three LDA model with different scenarios.
+
+a: Variable selection using the box plots and testing accuracy of LDA models with different predictors
+
+```{r}
+set.seed(1234)
+# Removing the shape from the training dataset 
+
+brand_df <- training_dt[,c(-1,-3)]
+
+#Fitting the LDA Model with Brand as the response variable and using all the Predictors.
+Brand_LDA_MDL1 = lda(Brand ~ . , data=brand_df)
+
+# Testing the model on validation set
+Brand_LDA_pred1 <-predict(Brand_LDA_MDL1,validation_dt)
+
+# Get the response variable values,model predictions
+Brand_LDA_Predictions1 <- Brand_LDA_pred1$class
+
+# Get the actual response variable values from testing data
+true_values <- validation_dt$Brand
+
+# Get Accuracy Matrix
+table(Brand_LDA_Predictions1, true_values)
+
+# Calculating the accuracy
+Brand_LDA_mdl1_Accr <- mean(Brand_LDA_Predictions1 ==true_values)
+
+#Getting the accuracy by each Brand 
+#Count of True Values by each Brand
+
+True_values1 <- validation_dt %>% 
+                group_by(Brand) %>%
+                summarise(True_value=n())
+
+# True Predicted values 
+validation_dt1 <- validation_dt
+validation_dt1$Brand_LDA_Predictions1 <- Brand_LDA_pred1$class
+
+Predicted_value_data1 <- validation_dt1 %>% filter(Brand == Brand_LDA_Predictions1) 
+
+#Count of Predicted Values by each Brand
+
+Predicted_values1 <- Predicted_value_data1 %>% 
+                    group_by(Brand_LDA_Predictions1) %>%
+                    summarise(Predicted_value=n())
+
+colnames(Predicted_values1)[1] <- "Brand"
+
+#Merging the True Value data by Predicted Values
+
+Accuracy1 <- data.frame(merge(x= True_values1, y=Predicted_values1,by="Brand", all.x=TRUE))
+
+# Calculating the Accuracy by Each Brand 
+
+Accuracy1$accuracy_percent <- Accuracy1$Predicted_value/ Accuracy1$True_value
+
+# Dropping the variables for final accuracy data set 
+AllBrand_LDA_mdl1_Accr = subset(Accuracy1 , select = c(Brand,accuracy_percent))
+
+# Accuracy by each brand 
+
+AllBrand_LDA_mdl1_Accr
+
+# Showing the count of brands where the accuracy is above then or equal to 80% 
+AllBrand_LDA_mdl1_Accr_Up <- AllBrand_LDA_mdl1_Accr[!is.na(AllBrand_LDA_mdl1_Accr$accuracy_percent), ]
+AllBrand_LDA_mdl1_Accr_Up <- AllBrand_LDA_mdl1_Accr_Up %>% filter(accuracy_percent >= .80) 
+AllBrand_LDA_mdl1_Accr_Up <- AllBrand_LDA_mdl1_Accr_Up %>% 
+                            summarise(Accuracy_Above_80=n())
+AllBrand_LDA_mdl1_Accr_Up
+
+# Counting the  number of brands with absolute mis-classification ( 100 percent mis-classification).
+AllBrand_LDA_mdl1_Accr_mis<- AllBrand_LDA_mdl1_Accr[is.na(AllBrand_LDA_mdl1_Accr$accuracy_percent), ]
+AllBrand_LDA_mdl1_Accr_mis <- AllBrand_LDA_mdl1_Accr_mis %>% 
+                            summarise(Missing_pred=n())
+AllBrand_LDA_mdl1_Accr_mis
+
+#Overall LDA Model 1 Accuracy Printing Results
+cat("LDA Accuracy mdl1 for Brand is:", Brand_LDA_mdl1_Accr)
+
+```
+
+### b: LDA Model2 with Brand as the response variables and log(Area) + log(Perim.) + log(Major) + Minor + Circ. + AR + Round + Solidity + Area \* Perim. \* Major + Solidity \* Circ. \* Round predictors.
+
+```{r}
+
+set.seed(1234)
+
+#Fitting the LDA Model with Brand as the response variable and log(Area) + log(Perim.) + log(Major) + Minor + Circ. + AR + Round + Solidity + Area \* Perim. \* Major + Solidity \* Circ. \* Round  predictors.
+Brand_LDA_MDL2 = lda(Brand ~ log(Area) + log(Perim.) + log(Major) + Minor + Circ. + AR + Round + Solidity +  Area * Perim. * Major +  Solidity * Circ. * Round , data=brand_df)
+
+# Testing the model on validation set
+Brand_LDA_pred2 <-predict(Brand_LDA_MDL2,validation_dt)
+
+# Get the response variable values,model predictions
+Brand_LDA_Predictions2 <- Brand_LDA_pred2$class
+
+# Get Accuracy Matrix
+table(Brand_LDA_Predictions2, true_values)
+
+# Calculating the accuracy
+Brand_LDA_mdl2_Accr <- mean(Brand_LDA_Predictions2 ==true_values)
+
+#Getting the accuracy by each Brand 
+#Count of True Values by each Brand
+
+True_values2 <- validation_dt %>% 
+               group_by(Brand) %>%
+               summarise(True_value=n())
+
+# True Predicted values 
+validation_dt2 <- validation_dt
+validation_dt2$Brand_LDA_Predictions2 <- Brand_LDA_pred2$class
+
+Predicted_value_data2 <- validation_dt2 %>% filter(Brand == Brand_LDA_Predictions2) 
+
+#Count of Predicted Values by each Brand
+
+Predicted_values2 <- Predicted_value_data2 %>% 
+                    group_by(Brand_LDA_Predictions2) %>%
+                    summarise(Predicted_value=n())
+
+colnames(Predicted_values2)[1] <- "Brand"
+
+#Merging the True Value data by Predicted Values
+
+Accuracy2 <- data.frame(merge(x=True_values2,y= Predicted_values2,by="Brand", all.x=TRUE))
+
+# Calculating the Accuracy by Each Brand 
+
+Accuracy2$accuracy_percent <- Accuracy2$Predicted_value/ Accuracy2$True_value
+
+# Dropping the variables for final accuracy data set 
+AllBrand_LDA_mdl2_Accr = subset(Accuracy2 , select = c(Brand,accuracy_percent))
+
+# Accuracy by each brand 
+
+AllBrand_LDA_mdl2_Accr
+
+# Showing the count of brands where the accuracy is above then or equal to 80% 
+AllBrand_LDA_mdl2_Accr_Up <- AllBrand_LDA_mdl2_Accr[!is.na(AllBrand_LDA_mdl2_Accr$accuracy_percent), ]
+AllBrand_LDA_mdl2_Accr_Up <- AllBrand_LDA_mdl2_Accr_Up %>% filter(accuracy_percent >= .80) 
+AllBrand_LDA_mdl2_Accr_Up <- AllBrand_LDA_mdl2_Accr_Up %>% 
+                            summarise(Accuracy_Above_80=n())
+AllBrand_LDA_mdl2_Accr_Up
+
+# Counting the number of brands with absolute mis-classification ( 100 percent mis-classification).
+AllBrand_LDA_mdl2_Accr_mis<- AllBrand_LDA_mdl2_Accr[is.na(AllBrand_LDA_mdl2_Accr$accuracy_percent), ]
+AllBrand_LDA_mdl2_Accr_mis <- AllBrand_LDA_mdl2_Accr_mis %>% 
+                            summarise(Missing_pred=n())
+AllBrand_LDA_mdl2_Accr_mis
+
+#Overall LDA Model 2 Accuracy Printing Results
+cat("LDA Accuracy mdl2 for Brand is:", Brand_LDA_mdl2_Accr)
+
+```
+
+### c: LDA Model3 with Shape as the response variables and log(Area) + log(Perim.) + Major + Minor + Circ. + AR + Round + Solidity + Area \* Major \* Circ. + Perim. \* Major \* Solidity predictors..
+
+```{r}
+set.seed(1234)
+
+#Fitting the LDA Model with Brand as the response variable and log(Area) + log(Perim.) + Major + Minor + Circ. + AR + Round + Solidity + Area \* Major \* Circ. + Perim. \* Major \* Solidity predictors.
+Brand_LDA_MDL3 = lda(Brand ~ log(Area) + log(Perim.) + Major + Minor + Circ. + AR + Round + Solidity +  Area *  Major * Circ. + Perim. * Major * Solidity, data=brand_df)
+
+# Testing the model on validation set
+Brand_LDA_pred3 <-predict(Brand_LDA_MDL3,validation_dt)
+
+# Get the response variable values,model predictions
+Brand_LDA_Predictions3 <- Brand_LDA_pred3$class
+
+# Get Accuracy Matrix
+table(Brand_LDA_Predictions3, true_values)
+
+# Calculating the accuracy
+Brand_LDA_mdl3_Accr <- mean(Brand_LDA_Predictions3 ==true_values)
+
+#Getting the accuracy by each Brand 
+#Count of True Values by each Brand
+
+True_values3 <- validation_dt %>% 
+               group_by(Brand) %>%
+               summarise(True_value=n())
+
+# True Predicted values 
+validation_dt3 <- validation_dt
+validation_dt3$Brand_LDA_Predictions3 <- Brand_LDA_pred3$class
+
+Predicted_value_data3 <- validation_dt3 %>% filter(Brand == Brand_LDA_Predictions3) 
+
+#Count of Predicted Values by each Brand
+
+Predicted_values3 <- Predicted_value_data3 %>% 
+                    group_by(Brand_LDA_Predictions3) %>%
+                    summarise(Predicted_value=n())
+
+colnames(Predicted_values3)[1] <- "Brand"
+
+#Merging the True Value data by Predicted Values
+
+Accuracy3 <- data.frame(merge(x=True_values3,y= Predicted_values3,by="Brand", all.x=TRUE))
+
+# Calculating the Accuracy by Each Brand 
+
+Accuracy3$accuracy_percent <- Accuracy3$Predicted_value/ Accuracy3$True_value
+
+# Dropping the variables for final accuracy data set 
+AllBrand_LDA_mdl3_Accr = subset(Accuracy3 , select = c(Brand,accuracy_percent))
+
+# Accuracy by each brand 
+
+AllBrand_LDA_mdl3_Accr
+
+# Showing the count of brands where the accuracy is above then or equal to 80% 
+AllBrand_LDA_mdl3_Accr_Up <- AllBrand_LDA_mdl3_Accr[!is.na(AllBrand_LDA_mdl3_Accr$accuracy_percent), ]
+AllBrand_LDA_mdl3_Accr_Up <- AllBrand_LDA_mdl3_Accr_Up %>% filter(accuracy_percent >= .80) 
+AllBrand_LDA_mdl3_Accr_Up <- AllBrand_LDA_mdl3_Accr_Up %>% 
+                            summarise(Accuracy_Above_80=n())
+AllBrand_LDA_mdl3_Accr_Up
+
+# Counting the number of brands with absolute mis-classification ( 100 percent mis-classification).
+AllBrand_LDA_mdl3_Accr_mis<- AllBrand_LDA_mdl3_Accr[is.na(AllBrand_LDA_mdl3_Accr$accuracy_percent), ]
+AllBrand_LDA_mdl3_Accr_mis <- AllBrand_LDA_mdl3_Accr_mis %>% 
+                            summarise(Missing_pred=n())
+AllBrand_LDA_mdl3_Accr_mis
+
+#Overall LDA Model 3 Accuracy Printing Results
+cat("LDA Accuracy mdl3 for Brand is:", Brand_LDA_mdl3_Accr)
+
+```
+
+From the above LDA model: LDA model2 has an overall accuracy of 29 percent. It predicted 9 brands with an accuracy above than 80 percent. It classified 52% of the unique brands, but have 48% absolute mis-classification, in comparison to other LDA models the absolute mis-classification is the least for LDA model2.
+
+**Reference**:
+
+-   Z. (2020, October 30). Linear Discriminant Analysis in R (Step-by-Step). Statology. Retrieved March 11, 2023, from <https://www.statology.org/linear-discriminant-analysis-in-r/>
+
+-   Sarkar, Priyankur. "What Is LDA: Linear Discriminant Analysis for Machine Learning." What Is Linear Discriminant Analysis (LDA)?, Knowledgehut, 27 Dec. 2022,
+
+### Step 6: Beginning QDA Analysis with Brand as the response variables and log(Area) + log(Perim.) + log(Major) + Minor + Circ. + AR + Round + Solidity + Area \* Perim. \* Major + Solidity \* Circ. \* Round predictors..
+
+### QDA model
+
+```{r}
+set.seed(1234)
+
+#Fitting the QDA Model with Brand as the response variable and using log(Area) + log(Perim.) + log(Major) + Minor + Circ. + AR + Round + Solidity +  Area * Perim. * Major +  Solidity * Circ. * Round predictors. 
+Brand_QDA_MDL = qda(Brand ~ log(Area) + log(Perim.) + log(Major) + Minor + Circ. + AR + Round + Solidity +  Area * Perim. * Major +  Solidity * Circ. * Round , data=brand_df)
+
+# Testing the model on validation set
+Brand_QDA_pred <-predict(Brand_QDA_MDL,validation_dt)
+
+# Get the response variable values,model predictions
+Brand_QDA_Predictions <- Brand_QDA_pred$class
+
+# Get Accuracy Matrix
+table(Brand_QDA_Predictions, true_values)
+
+# Calculating the accuracy
+Brand_QDA_mdl_Accr <- mean(Brand_QDA_Predictions ==true_values)
+
+#Getting the accuracy by each Brand 
+#Count of True Values by each Brand
+
+QDA_True_values <- validation_dt %>% 
+               group_by(Brand) %>%
+               summarise(True_value=n())
+
+# True Predicted values 
+QDA_validation_dt <- validation_dt
+QDA_validation_dt$Brand_QDA_Predictions <- Brand_QDA_pred$class
+
+QDA_Predicted_value_data <- QDA_validation_dt %>% filter(Brand == Brand_QDA_Predictions) 
+
+#Count of Predicted Values by each Brand
+
+QDA_Predicted_values <- QDA_Predicted_value_data %>% 
+                    group_by(Brand_QDA_Predictions) %>%
+                    summarise(Predicted_value=n())
+
+colnames(QDA_Predicted_values)[1] <- "Brand"
+
+#Merging the True Value data by Predicted Values
+
+QDA_Accuracy <- data.frame(merge(x=QDA_True_values,y= QDA_Predicted_values,by="Brand", all.x=TRUE))
+
+# Calculating the Accuracy by Each Brand 
+
+QDA_Accuracy$accuracy_percent <- QDA_Accuracy$Predicted_value/ QDA_Accuracy$True_value
+
+# Dropping the variables for final accuracy data set 
+AllBrand_QDA_mdl_Accr = subset(QDA_Accuracy , select = c(Brand,accuracy_percent))
+
+# Accuracy by each brand 
+
+AllBrand_QDA_mdl_Accr
+
+# Showing the count of brands where the accuracy is above then or equal to 80% 
+AllBrand_QDA_mdl_Accr_Up <- AllBrand_QDA_mdl_Accr[!is.na(AllBrand_QDA_mdl_Accr$accuracy_percent), ]
+AllBrand_QDA_mdl_Accr_Up <- AllBrand_QDA_mdl_Accr_Up %>% filter(accuracy_percent >= .80) 
+AllBrand_QDA_mdl_Accr_Up <- AllBrand_QDA_mdl_Accr_Up %>% 
+                            summarise(Accuracy_Above_80=n())
+AllBrand_QDA_mdl_Accr_Up
+
+# Counting the number of brands with absolute mis-classification ( 100 percent mis-classification).
+AllBrand_QDA_mdl_Accr_mis<- AllBrand_QDA_mdl_Accr[is.na(AllBrand_QDA_mdl_Accr$accuracy_percent), ]
+AllBrand_QDA_mdl_Accr_mis <- AllBrand_QDA_mdl_Accr_mis %>% 
+                            summarise(Missing_pred=n())
+AllBrand_QDA_mdl_Accr_mis
+
+#Overall QDA Model  Accuracy Printing Results
+cat("QDA Accuracy mdl for Brand is:", Brand_QDA_mdl_Accr)
+
+
+```
+
+From the above QDA model: QDA model has an overall accuracy of 22 percent. It predicted 11 brands with an accuracy above than 80 percent which is better than LDA model. It classified 49 % of the unique brands, but have 51% absolute mis-classification, in comparison to LDA model the absolute mis-classification is higher.
+
+**Reference**:
+
+-   Z. (2020, November 2). Quadratic Discriminant Analysis in R (Step-by-Step). Statology. Retrieved March 12, 2023, from <https://www.statology.org/quadratic-discriminant-analysis-in-r/>
+
+-   Saunders, C. (2023, February 10). Classification Part 2 LDA and QDA [Lecture]. D2l.Sdbor.edu. <https://d2l.sdbor.edu/d2l/le/content/1781558/viewContent/11116132/View>
+
+### Step 7: Beginning Random forest with Brand as the response variables and log(Area) + log(Perim.) + log(Major) + Circ. + AR + Round + Solidity + Area \* Major \* Circ. + Perim. \* Major \* Round interactions.
+
+```{r}
+set.seed(1234)
+
+#Fitting the randomForest
+Brand_randomForest_MDL = randomForest(Brand ~ log(Area) + log(Perim.) + log(Major)  + Circ. + AR + Round + Solidity +  Area * Major * Circ. + Perim. * Major * Round  , data=brand_df)
+
+# Testing the model on validation set
+Brand_randomForest_Predictions  <-predict(Brand_randomForest_MDL,validation_dt)
+
+# Get Accuracy Matrix
+table(Brand_randomForest_Predictions, true_values)
+
+# Calculating the accuracy
+Brand_randomForest_mdl_Accr <- mean(Brand_randomForest_Predictions ==true_values)
+
+#Getting the accuracy by each Brand 
+#Count of True Values by each Brand
+
+randomForest_True_values <- validation_dt %>% 
+               group_by(Brand) %>%
+               summarise(True_value=n())
+
+# True Predicted values 
+randomForest_validation_dt <- validation_dt
+randomForest_validation_dt$Brand_randomForest_Predictions <- predict(Brand_randomForest_MDL,validation_dt)
+
+randomForest_Predicted_value_data <- randomForest_validation_dt %>% filter(Brand == Brand_randomForest_Predictions) 
+
+#Count of Predicted Values by each Brand
+
+randomForest_Predicted_values <- randomForest_Predicted_value_data %>% 
+                    group_by(Brand_randomForest_Predictions) %>%
+                    summarise(Predicted_value=n())
+
+colnames(randomForest_Predicted_values)[1] <- "Brand"
+
+#Merging the True Value data by Predicted Values
+
+randomForest_Accuracy <- data.frame(merge(x=randomForest_True_values,y= randomForest_Predicted_values,by="Brand", all.x=TRUE))
+
+# Calculating the Accuracy by Each Brand 
+
+randomForest_Accuracy$accuracy_percent <- randomForest_Accuracy$Predicted_value/ randomForest_Accuracy$True_value
+
+# Dropping the variables for final accuracy data set 
+AllBrand_randomForest_mdl_Accr = subset(randomForest_Accuracy , select = c(Brand,accuracy_percent))
+
+# Accuracy by each brand 
+
+AllBrand_randomForest_mdl_Accr
+
+# Showing the count of brands where the accuracy is above then or equal to 80% 
+AllBrand_randomForest_mdl_Accr_Up <- AllBrand_randomForest_mdl_Accr[!is.na(AllBrand_randomForest_mdl_Accr$accuracy_percent), ]
+AllBrand_randomForest_mdl_Accr_Up <- AllBrand_randomForest_mdl_Accr_Up %>% filter(accuracy_percent >= .80) 
+AllBrand_randomForest_mdl_Accr_Up <- AllBrand_randomForest_mdl_Accr_Up %>% 
+                            summarise(Accuracy_Above_80=n())
+AllBrand_randomForest_mdl_Accr_Up 
+
+# Counting the number of brands with absolute mis-classification (100 percent mis-classification).
+AllBrand_randomForest_mdl_Accr_mis<- AllBrand_randomForest_mdl_Accr[is.na(AllBrand_randomForest_mdl_Accr$accuracy_percent), ]
+AllBrand_randomForest_mdl_Accr_mis <- AllBrand_randomForest_mdl_Accr_mis %>% 
+                            summarise(Missing_pred=n())
+AllBrand_randomForest_mdl_Accr_mis
+
+#Overall Random Forest Model  Accuracy Printing Results
+cat("Random Forest Accuracy mdl for Brand is:", Brand_randomForest_mdl_Accr)
+
+```
+
+From the above Random Forest model: Random Forest model has an overall accuracy of 32 percent. It predicted 9 brands with an accuracy above than 80 percent, which is very close to LDA and QDA model. It classified 74% of the unique brands, but have 26% absolute mis-classification, in comparison to other models the absolute mis-classification is the least for Randomforest model.
+
+### Step 8: Beginning MclustDa model with Brand as the response variable.
+
+```{r}
+
+'Set seed'
+set.seed(123)
+
+#separate the predictors we will be using in the model
+mclustTrain <- brand_df[ , c("Area","Perim.","Major","Circ.", "AR","Round","Solidity")] 
+mclustTest <- validation_dt[ , c("Area","Perim.","Major","Circ.", "AR","Round","Solidity")] 
+
+#separate the Brand variable from the training data
+mclustClass <- brand_df[ , c("Brand")]
+
+# Fitting the MclustDA Model using Eccentricity, Extent & Area Predictors with G= 1
+mclust.mod <- MclustDA(mclustTrain, mclustClass, G = 1)
+
+#Print summary
+summary(mclust.mod)
+
+# Predictions on test data
+
+MclustDA_pred <- predict.MclustDA(mclust.mod, newdata = mclustTest)
+
+MclustDA_predictions <- MclustDA_pred$class
+
+true_values <- validation_dt$Brand
+
+# Confusion Matrix of MclustDA model
+table(MclustDA_predictions, validation_dt$Brand)
+
+# Finding accuracy of MclustDA model
+
+Brand_MclustDA_Accr<- mean(MclustDA_predictions==validation_dt$Brand)
+
+#Getting the accuracy by each Brand 
+#Count of True Values by each Brand
+
+MclustDA_True_values <- validation_dt %>% 
+               group_by(Brand) %>%
+               summarise(True_value=n())
+
+# True Predicted values 
+MclustDA_validation_dt <- validation_dt
+MclustDA_validation_dt$Brand_MclustDA_Predictions <- MclustDA_predictions
+
+MclustDA_Predicted_value_data <- MclustDA_validation_dt %>% filter(Brand == Brand_MclustDA_Predictions) 
+
+#Count of Predicted Values by each Brand
+
+MclustDA_Predicted_values <- MclustDA_Predicted_value_data %>% 
+                    group_by(Brand_MclustDA_Predictions) %>%
+                    summarise(Predicted_value=n())
+
+colnames(MclustDA_Predicted_values)[1] <- "Brand"
+
+#Merging the True Value data by Predicted Values
+
+MclustDA_Accuracy <- data.frame(merge(x=MclustDA_True_values,y= MclustDA_Predicted_values,by="Brand", all.x=TRUE))
+
+# Calculating the Accuracy by Each Brand 
+
+MclustDA_Accuracy$accuracy_percent <- MclustDA_Accuracy$Predicted_value/ MclustDA_Accuracy$True_value
+
+# Dropping the variables for final accuracy data set 
+AllBrand_MclustDA_mdl_Accr = subset(MclustDA_Accuracy , select = c(Brand,accuracy_percent))
+
+# Accuracy by each brand 
+
+AllBrand_MclustDA_mdl_Accr
+
+# Showing the count of brands where the accuracy is above then or equal to 80% 
+AllBrand_MclustDA_mdl_Accr_Up <- AllBrand_MclustDA_mdl_Accr[!is.na(AllBrand_MclustDA_mdl_Accr$accuracy_percent), ]
+AllBrand_MclustDA_mdl_Accr_Up <- AllBrand_MclustDA_mdl_Accr_Up %>% filter(accuracy_percent >= .80) 
+AllBrand_MclustDA_mdl_Accr_Up <- AllBrand_MclustDA_mdl_Accr_Up %>% 
+                            summarise(Accuracy_Above_80=n())
+AllBrand_MclustDA_mdl_Accr_Up 
+
+# Counting the number of brands with absolute mis-classification (100 percent mis-classification).
+AllBrand_MclustDA_mdl_Accr_mis<- AllBrand_MclustDA_mdl_Accr[is.na(AllBrand_MclustDA_mdl_Accr$accuracy_percent), ]
+AllBrand_MclustDA_mdl_Accr_mis <- AllBrand_MclustDA_mdl_Accr_mis %>% 
+                            summarise(Missing_pred=n())
+AllBrand_MclustDA_mdl_Accr_mis
+
+#Overall MclustDA Model  Accuracy Printing Results
+cat("MclustDAAccuracy mdl for Brand is:", Brand_MclustDA_Accr)
+
+```
+
+From the above MclustDA model: MclustDA model has an overall accuracy of 24 percent. It predicted 16 brands with an accuracy above than 80 percent.It classified 45% of the unique brands, but have 55% absolute mis-classification, in comparison to Randomforest model the mis-classification is high.
+
+### Step 9: Creating table for final prediction:
+
+### Smokeless Gun Powder data results in the form of a table
+
+```{r}
+
+# Creating a Table for the final results from all the models
+
+Test_Model_Metrics <- data.frame(cbind(Models = c("LDA", "QDA", "Randomforest", "MclustDA"),
+                                       Overall_Accuracy           = round(c(Brand_LDA_mdl2_Accr, Brand_QDA_mdl_Accr, Brand_randomForest_mdl_Accr, Brand_MclustDA_Accr),4),
+                                       Brand_Count_with_Acc_80    = (c(AllBrand_LDA_mdl2_Accr_Up$Accuracy_Above_80 , AllBrand_QDA_mdl_Accr_Up$Accuracy_Above_80 , AllBrand_randomForest_mdl_Accr_Up$Accuracy_Above_80 , AllBrand_MclustDA_mdl_Accr_Up$Accuracy_Above_80)),
+                                       Brand_Count_with_Pred_Mis  = (c(AllBrand_LDA_mdl2_Accr_mis$Missing_pred, AllBrand_QDA_mdl_Accr_mis$Missing_pred, AllBrand_randomForest_mdl_Accr_mis$Missing_pred, AllBrand_MclustDA_mdl_Accr_mis$Missing_pred))))
+                                       
+kable(Test_Model_Metrics , caption = "Model Results Analysis Table")
+
+```
+
+Based on the above table we can see that Random forest have the best overall accuracy of 32%. It predicted 9 brands with an accuracy above than 80 percent, which is very close to LDA and QDA model. It classified 74% of the unique brands, but have 26% absolute mis-classification, in comparison to other models the absolute mis-classification is the least for Randomforest model. This is the best model for the analysis.
+
+### Step 10: Creating table for final prediction by each model
+
+```{r}
+# Creating a Table for the final accuracy by each model. 
+
+Accuracy_b <- data.frame(merge(x=AllBrand_LDA_mdl2_Accr,y= AllBrand_QDA_mdl_Accr,by="Brand", all.x=TRUE))
+Accuracy_c <- data.frame(merge(x=Accuracy_b,y= AllBrand_randomForest_mdl_Accr,by="Brand", all.x=TRUE))
+Accuracy_by_Brand <- data.frame(merge(x=Accuracy_c,y= AllBrand_MclustDA_mdl_Accr,by="Brand", all.x=TRUE))
+colnames(Accuracy_by_Brand)[2] <- "LDA_accuracy_percent"
+colnames(Accuracy_by_Brand)[3] <- "QDA_accuracy_percent"
+colnames(Accuracy_by_Brand)[4] <- "RandomForest_accuracy_percent"
+colnames(Accuracy_by_Brand)[5] <- "MclustDAt_accuracy_percent"
+
+# Showing the best accuracy by brands for random forest and checking how other models did for the same brands
+Accuracy_by_Brand_Up <-  Accuracy_by_Brand[!is.na(Accuracy_by_Brand$RandomForest_accuracy_percent), ]
+Top_10_Accuracy<- Accuracy_by_Brand_Up[order(Accuracy_by_Brand_Up$RandomForest_accuracy_percent),]
+Top_10_Accuracy <- tail(Top_10_Accuracy, n=10)
+Top_10_Accuracy
+```
+
+### Step 11: Testing the Random forest Model.
+
+```{r}
+set.seed(1234)
+
+# Testing the model on test set
+Brand_randomForest_Predictions1  <-predict(Brand_randomForest_MDL,testing_dt)
+
+# Get Accuracy Matrix
+table(Brand_randomForest_Predictions1, testing_dt$Brand)
+
+# Calculating the accuracy
+Brand_randomForest_mdl_Accr1 <- mean(Brand_randomForest_Predictions1 ==testing_dt$Brand)
+
+#Getting the accuracy by each Brand 
+#Count of True Values by each Brand
+
+randomForest_True_values <- testing_dt %>% 
+               group_by(Brand) %>%
+               summarise(True_value=n())
+
+# True Predicted values 
+randomForest_testing_dt1 <- testing_dt
+randomForest_testing_dt1$Brand_randomForest_Predictions1 <- predict(Brand_randomForest_MDL,testing_dt)
+
+randomForest_Predicted_value_data1 <- randomForest_testing_dt1 %>% filter(Brand == Brand_randomForest_Predictions1) 
+
+#Count of Predicted Values by each Brand
+
+randomForest_Predicted_values1 <- randomForest_Predicted_value_data1 %>% 
+                    group_by(Brand_randomForest_Predictions1) %>%
+                    summarise(Predicted_value=n())
+
+colnames(randomForest_Predicted_values1)[1] <- "Brand"
+
+#Merging the True Value data by Predicted Values
+
+randomForest_Accuracy1 <- data.frame(merge(x=randomForest_True_values,y= randomForest_Predicted_values1,by="Brand", all.x=TRUE))
+
+# Calculating the Accuracy by Each Brand 
+
+randomForest_Accuracy1$accuracy_percent <- randomForest_Accuracy1$Predicted_value/ randomForest_Accuracy1$True_value
+
+# Dropping the variables for final accuracy data set 
+AllBrand_randomForest_mdl_Accr1 = subset(randomForest_Accuracy1 , select = c(Brand,accuracy_percent))
+
+# Accuracy by each brand 
+
+AllBrand_randomForest_mdl_Accr1
+
+#Overall randomForestinal Model  Accuracy Printing Results
+cat("randomForest Accuracy mdl for Brand is:", Brand_randomForest_mdl_Accr1)
+
+```
+
+The Final testing confirms that the random forest is the best model for predicting the Brand.
+
+### Step 12: Creating a Model to predict the Shape. We are creating this to validate our results based on the Shape.
+
+```{r}
+# Creating a Train data for Shape
+
+Shape_df <- training_dt[,c(-1,-2)]
+
+set.seed(1234)
+
+# Fitting the randomforest Model using shape as the response variable and  log(Area) + log(Perim.) + log(Major)  + Circ. + AR + Round + Solidity +  Area * Major * Circ. + Perim. * Major * Round predictors. 
+Shape_randomforest_MDL = randomForest(Shape~ log(Area) + log(Perim.) + log(Major)  + Circ. + AR + Round + Solidity +  Area * Major * Circ. + Perim. * Major * Round, data=Shape_df)
+
+# Testing the model
+Shape_randomforest_Predictions <-predict(Shape_randomforest_MDL,testing_dt)
+
+# Get the actual response variable values from testing data
+true_values <- testing_dt$Shape
+
+# Get Accuracy Matrix
+table(Shape_randomforest_Predictions, true_values)
+
+# Calculating the accuracy
+Shape_randomforest_mdl_Accr <- mean(Shape_randomforest_Predictions  ==true_values)
+
+# Printing Results
+cat("Randomforest Accuracy for Shape is:",Shape_randomforest_mdl_Accr)
+```
+
+The Overall Accuracy for shape is 90%.
+
+### Step 13: Prediction of Recovered Samples using the RandomForest Model.
+
+### Predictions of Sample 1
+
+```{r}
+
+# Predicting Sample 1 using the Random forest Model 
+recovered.sample1$Brand <-predict(Brand_randomForest_MDL,recovered.sample1)
+
+# final Predictions: 
+
+sample1_Pred <- data.frame(merge(recovered.sample1,AllBrand_randomForest_mdl_Accr1,by="Brand"))
+
+sample1_values <- sample1_Pred %>% 
+      group_by(Brand) %>%
+      summarise(Predicted_value=sum(accuracy_percent))
+
+# Finding the brand 
+Brand.Sample1 <- sample1_values[order(sample1_values$Predicted_value),]
+Brand.Sample1<- tail(Brand.Sample1, n=1)
+Brand.Sample1
+
+# Testing the other models to confirm our results
+red.Dot.accr<- Accuracy_by_Brand %>% 
+  filter(Accuracy_by_Brand$Brand == "RedDot")
+red.Dot.accr
+
+#Implementing LDA
+# Predicting Sample 1 using the Random forest Model 
+LDA_sample1<-predict(Brand_LDA_MDL2,recovered.sample1)
+
+# Exporting predictions to a csv file
+write.csv(LDA_sample1, "sample1_randFrst.csv", row.names=FALSE)
+
+
+Lda_sample1_N <- data.frame(LDA_sample1$class)
+
+LDA_sample.1 <- Lda_sample1_N %>% 
+      group_by(LDA_sample1.class) %>%
+      summarise(Predicted_value=n())
+
+# Finding the brand using LDA
+LDA_Brand.Sample1 <- LDA_sample.1[order(LDA_sample.1$Predicted_value),]
+LDA_Brand.Sample1<- tail(LDA_Brand.Sample1, n=1)
+LDA_Brand.Sample1
+
+#Implementing Random Forest for Shape 
+
+# Predicting Sample 1 using the Random forest Model 
+randomforest_Shape_sample1 <- data.frame(predict(Shape_randomforest_MDL,recovered.sample1))
+
+randomforest_Shape_sample1_values <- randomforest_Shape_sample1 %>% 
+      group_by(predict.Shape_randomforest_MDL..recovered.sample1.) %>%
+      summarise(Predicted_value=n())
+
+randomforest_Shape_sample1_values<- randomforest_Shape_sample1_values[order(randomforest_Shape_sample1_values$Predicted_value),]
+randomforest_Shape_sample1_values<- tail(randomforest_Shape_sample1_values, n=1)
+randomforest_Shape_sample1_values
+
+```
+
+Based on the results from selected Random Forest model Recovered.sample 1 has the highest predicted value of 164 and is from Brand Reddot. We validated our results by implementing the LDA Model and the predicted value of Reddot is the highest with LDA as well. To further confirm our results we predicted the shape of the recovered sample 1 and the flake has the highest predicted value. We checked the shape of Reddot is flake from the train data, This confirms our results that the recovered sample 1 is from brand Reddot.
+
+### PRedictions of Sample 2
+
+```{r}
+
+# Predicting Sample 2 using the Random forest Model 
+recovered.sample2$Brand <-predict(Brand_randomForest_MDL,recovered.sample2)
+
+# final Predictions: 
+
+sample2_Pred <- data.frame(merge(recovered.sample2,AllBrand_randomForest_mdl_Accr1,by="Brand"))
+
+sample2_values <- sample2_Pred %>% 
+      group_by(Brand) %>%
+      summarise(Predicted_value=sum(accuracy_percent))
+
+# Finding the brand 
+Brand.Sample2 <- sample2_values[order(sample2_values$Predicted_value),]
+Brand.Sample2<- tail(Brand.Sample2, n=1)
+Brand.Sample2
+
+# Testing the other models to confirm our results
+red.Dot.accr<- Accuracy_by_Brand %>% 
+  filter(Accuracy_by_Brand$Brand == "RedDot")
+red.Dot.accr
+
+#Implementing LDA
+# Predicting Sample 2 using the Random forest Model 
+LDA_sample2<-predict(Brand_LDA_MDL2,recovered.sample2)
+
+# Exporting predictions to a csv file
+write.csv(LDA_sample2, "sample2_randFrst.csv", row.names=FALSE)
+
+
+Lda_sample2_N <- data.frame(LDA_sample2$class)
+
+LDA_sample.2 <- Lda_sample2_N %>% 
+      group_by(LDA_sample2.class) %>%
+      summarise(Predicted_value=n())
+
+# Finding the brand 
+LDA_Brand.Sample2 <- LDA_sample.2[order(LDA_sample.2$Predicted_value),]
+LDA_Brand.Sample2<- tail(LDA_Brand.Sample2, n=1)
+LDA_Brand.Sample2
+
+#Implementing Random Forest for Shape 
+
+# Predicting Sample 2 using the Random forest Model 
+randomforest_Shape_sample2 <- data.frame(predict(Shape_randomforest_MDL,recovered.sample2))
+
+randomforest_Shape_sample2_values <- randomforest_Shape_sample2 %>% 
+      group_by(predict.Shape_randomforest_MDL..recovered.sample2.) %>%
+      summarise(Predicted_value=n())
+
+randomforest_Shape_sample2_values<- randomforest_Shape_sample2_values[order(randomforest_Shape_sample2_values$Predicted_value),]
+randomforest_Shape_sample2_values<- tail(randomforest_Shape_sample2_values, n=1)
+randomforest_Shape_sample2_values
+
+
+
+```
+
+Based on the results from selected Random Forest model Recovered.sample 2 has the highest predicted value of 65 and is from Brand Reddot. We validated our results by implementing the LDA Model and the predicted value of Reddot is the highest with LDA as well. To further confirm our results we predicted the shape of the recovered sample 2 and the flake has the highest predicted value. This confirms our results that the recovered sample 2 is from brand Reddot.
+
+### PRedictions of Sample 3
+
+```{r}
+
+# Predicting Sample 3 using the Random forest Model 
+recovered.sample3$Brand <-predict(Brand_randomForest_MDL,recovered.sample3)
+
+# final Predictions: 
+
+sample3_Pred <- data.frame(merge(recovered.sample3,AllBrand_randomForest_mdl_Accr1,by="Brand"))
+
+sample3_values <- sample3_Pred %>% 
+      group_by(Brand) %>%
+      summarise(Predicted_value=sum(accuracy_percent))
+
+# Finding the brand 
+Brand.Sample3 <- sample3_values[order(sample3_values$Predicted_value),]
+Brand.Sample3<- tail(Brand.Sample3, n=1)
+Brand.Sample3
+
+# Testing the other models to confirm our results
+RamshotEnforcer.accr<- Accuracy_by_Brand %>% 
+  filter(Accuracy_by_Brand$Brand == "RamshotEnforcer")
+RamshotEnforcer.accr
+
+#Implementing LDA
+# Predicting Sample 3 using the Random forest Model 
+LDA_sample3<-predict(Brand_LDA_MDL2,recovered.sample3)
+
+# Exporting predictions to a csv file
+write.csv(LDA_sample3, "sample3_randFrst.csv", row.names=FALSE)
+
+
+Lda_sample3_N <- data.frame(LDA_sample3$class)
+
+LDA_sample.3 <- Lda_sample3_N %>% 
+      group_by(LDA_sample3.class) %>%
+      summarise(Predicted_value=n())
+
+# Finding the brand 
+LDA_Brand.Sample3 <- LDA_sample.3[order(LDA_sample.3$Predicted_value),]
+LDA_Brand.Sample3<- tail(LDA_Brand.Sample3, n=1)
+LDA_Brand.Sample3
+
+#Implementing Random Forest for Shape 
+
+# Predicting Sample 3 using the Random forest Model 
+randomforest_Shape_sample3 <- data.frame(predict(Shape_randomforest_MDL,recovered.sample3))
+
+randomforest_Shape_sample3_values <- randomforest_Shape_sample3 %>% 
+      group_by(predict.Shape_randomforest_MDL..recovered.sample3.) %>%
+      summarise(Predicted_value=n())
+
+randomforest_Shape_sample3_values 
+randomforest_Shape_sample3_values <- randomforest_Shape_sample3_values[order(randomforest_Shape_sample3_values$Predicted_value),]
+randomforest_Shape_sample3_values <- tail(randomforest_Shape_sample3_values , n=1)
+randomforest_Shape_sample3_values 
+
+
+```
+
+Based on the results from selected Random Forest model Recovered.sample 3 has the highest predicted value of 61 and is from Brand RamshotEnforcer. We validated our results by implementing the LDA Model and the predicted value of RamshotEnforcer is the highest with LDA as well. To further confirm our results we predicted the shape of the recovered sample 3 and the spherical has the highest predicted value. We checked the shape of RamshotEnforcer is spherical from the train data, This confirms our results that the recovered sample 3 is from brand RamshotEnforcer.
+
+### PRedictions of Sample 4
+
+```{r}
+
+# Predicting Sample 4 using the Random forest Model 
+recovered.sample4$Brand <-predict(Brand_randomForest_MDL,recovered.sample4)
+
+# final Predictions: 
+
+sample4_Pred <- data.frame(merge(recovered.sample4,AllBrand_randomForest_mdl_Accr1,by="Brand"))
+
+# Exporting predictions to a csv file
+write.csv(sample4_Pred, "sample4_randFrst.csv", row.names=FALSE)
+
+sample4_values <- sample4_Pred %>% 
+      group_by(Brand) %>%
+      summarise(Predicted_value=sum(accuracy_percent))
+sample4_values  <-  sample4_values[!is.na(sample4_values$Predicted_value), ]
+
+# Finding the brand 
+Brand.Sample4 <- sample4_values[order(sample4_values$Predicted_value),]
+Brand.Sample4<- tail(Brand.Sample4, n=1)
+Brand.Sample4
+
+# Testing the other models to confirm our results
+RamshotEnforcer.accr<- Accuracy_by_Brand %>% 
+  filter(Accuracy_by_Brand$Brand == "RamshotEnforcer")
+RamshotEnforcer.accr
+
+#Implementing LDA
+# Predicting Sample 4 using the Random forest Model 
+LDA_sample4<-predict(Brand_LDA_MDL2,recovered.sample4)
+Lda_sample4_N <- data.frame(LDA_sample4$class)
+
+LDA_sample.4 <- Lda_sample4_N %>% 
+      group_by(LDA_sample4.class) %>%
+      summarise(Predicted_value=n())
+LDA_sample.4  <-  LDA_sample.4[!is.na(LDA_sample.4$Predicted_value), ]
+
+# Finding the brand 
+LDA_Brand.Sample4 <- LDA_sample.4[order(LDA_sample.4$Predicted_value),]
+LDA_Brand.Sample4<- tail(LDA_Brand.Sample4, n=1)
+LDA_Brand.Sample4
+
+#Implementing Random Forest for Shape 
+
+# Predicting Sample 4 using the Random forest Model 
+randomforest_Shape_sample4 <- data.frame(predict(Shape_randomforest_MDL,recovered.sample4))
+
+randomforest_Shape_sample4_values <- randomforest_Shape_sample4 %>% 
+      group_by(predict.Shape_randomforest_MDL..recovered.sample4.) %>%
+      summarise(Predicted_value=n())
+
+randomforest_Shape_sample4_values
+randomforest_Shape_sample4_values <- randomforest_Shape_sample4_values[order(randomforest_Shape_sample4_values$Predicted_value),]
+randomforest_Shape_sample4_values <- tail(randomforest_Shape_sample4_values , n=1)
+randomforest_Shape_sample4_values
+```
+
+Based on the results from selected Random Forest model Recovered.sample 4 has the highest predicted value of 71 and is from Brand RamshotEnforcer. We validated our results by implementing the LDA Model and the predicted value of RamshotEnforcer is the highest with LDA as well. To further confirm our results we predicted the shape of the recovered sample 4 and the spherical has the highest predicted value. We checked the shape of RamshotEnforcer is spherical from the train data, This confirms our results that the recovered sample 4 is from brand RamshotEnforcer.
+
+### Creating a table of final results of prediction of all recovered samples:
+
+```{r}
+# Creating a Table for the final results for Brand
+
+Recovered_Sample_Results <- data.frame(cbind(Models = c("RandomForest", "LDA"),
+                                       Recovered.Sample1          = (c("RedDot", "RedDot")),
+                                       Recovered.Sample2          = (c("RedDot", "RedDot")),
+                                       Recovered.Sample3          = (c("RamshotEnforcer","RamshotEnforcer")), 
+                                       Recovered.Sample4          = (c("RamshotEnforcer","RamshotEnforcer"))))
+                                       
+kable(Recovered_Sample_Results , caption = "Recovered Sample Brand Prediction Results")
+
+# Creating a Table for the final results for shape
+
+Recovered_Sample_Shape_Results <- data.frame(cbind(Models = c("RandomForest"),
+                                       Recovered.Sample1          = (c("Flake")),
+                                       Recovered.Sample2          = (c("Flake")),
+                                       Recovered.Sample3          = (c("Spherical")), 
+                                       Recovered.Sample4          = (c("spherical"))))
+                                       
+kable(Recovered_Sample_Shape_Results , caption = "Recovered Sample Shape Prediction Results")
+```
+
+Conclusion: From the above results we can see that Recovered Sample 1 and Sample 2 are from the same brand ("RedDot"). The recovered sample 3 and Sample 4 are from same brand "RamshotEnforcer".
+
+***Reference:***
+
+1.  James, G., Witten, D., Hastie, T., & Tibshirani, R. (2021). An Introduction to Statistical Learning with Applications in R (2nd ed., p. 612). Springer. <https://hastie.su.domains/ISLR2/ISLRv2_website.pdf>
+2.  Wickham, H., Chang, W., & Henry, L. (n.d.). A box and whiskers plot (in the style of Tukey). ggplot2.tidyverse. Retrieved 10 March 2023, from <https://ggplot2.tidyverse.org/reference/geom_boxplot.html>
+3.  Statistics Globe (n.d.). Draw multiple Boxplots in one graph.statisticsglobe .Retrieved 10 March 2023, from <https://statisticsglobe.com/draw-multiple-boxplots-in-one-graph-in-r>
+4.  GGPLOT2 histogram plot : Quick Start Guide - R Software and Data Visualization. STHDA. (n.d.). Retrieved April 22, 2023, from <http://www.sthda.com/english/wiki/ggplot2-histogram-plot-quick-start-guide-r-software-and-data-visualization>
+5.  Zach. (2022, August 3). How to Perform a Two Sample T-Test in R. Statology. Retrieved April 22, 2023, from <https://www.statology.org/two-sample-t-test-in-r/>
+6.  Bevans, R. (2022). ANOVA in R \| A Complete Step-by-Step Guide with Examples. Scribbr.Retrieved April 22, 2023, from <https://www.scribbr.com/statistics/anova-in-r/>
+7.  Kruskal-Wallis Test \| R Tutorial. (n.d.). Chi Yau. scribbr. Retrieved April 22, 2023, from <https://www.r-tutor.com/elementary-statistics/non-parametric-methods/kruskal-wallis-test>
+8.  Z. (2022, April 12). How to Split Data into Training & Test Sets in R. Statology. Retrieved March 11, 2023, from <https://www.statology.org/train-test-split-r/>
+9.  R: How to split a data frame into training, validation, and test sets?, Stack Overflow. Retrieved March 11, 2023, from <https://stackoverflow.com/questions/36068963/r-how-to-split-a-data-frame-into-training-validation-and-test-sets>.
+10. (n.d.). Associations between Variables. Codecademy. Retrieved March 11, 2023, from <https://www.codecademy.com/learn/stats-associations-between-variables/modules/stats-associations-between-variables/cheatsheet>
+11. Z. (2020, October 30). Linear Discriminant Analysis in R (Step-by-Step). Statology. Retrieved March 11, 2023, from <https://www.statology.org/linear-discriminant-analysis-in-r/>
+12. Sarkar, Priyankur. "What Is LDA: Linear Discriminant Analysis for Machine Learning." What Is Linear Discriminant Analysis (LDA)?, Knowledgehut, 27 Dec. 2022, <https://www.knowledgehut.com/blog/data-science/linear-discriminant-analysis-for-machine-learning>.
+13. Z. (2020, November 2). Quadratic Discriminant Analysis in R (Step-by-Step). Statology. Retrieved March 12, 2023, from <https://www.statology.org/quadratic-discriminant-analysis-in-r/>
+14. Saunders, C. (2023, February 10). Classification Part 2 LDA and QDA [Lecture]. D2l.Sdbor.edu. <https://d2l.sdbor.edu/d2l/le/content/1781558/viewContent/11116132/View>
+15. Finnstats. (2021, April 13). Random Forest in R: R-bloggers. R. Retrieved April 22, 2023, from <https://www.r-bloggers.com/2021/04/random-forest-in-r/>
+16. Fraley, C., Raftery, A. E., & Scrucca, L. (n.d.). MclustDA discriminant analysis. Mclust-Org.Github. Retrieved March 13, 2023, from <https://mclust-org.github.io/mclust/reference/MclustDA.html>
+17. [shanem\@mtu.edu](mailto:shanem@mtu.edu){.email}, Shane T. Mueller. Model-Based Clustering and Mclust, 28 Mar. 2021, <https://pages.mtu.edu/~shanem/psy5220/daily/Day19/modelbasedclustering.html#content>.
+18. Saunders, C. (2023, February 24). MclustDA part1 [Lecture]. D2l.Sdbor.edu. <https://d2l.sdbor.edu/d2l/le/content/1781558/viewContent/11116023/View>
+19. Saunders, C. (2023, February 24). MclustDA part2 [Lecture]. D2l.Sdbor.edu. <https://d2l.sdbor.edu/d2l/le/content/1781558/viewContent/11116022/View>
+20. Saunders, C. (2023, February 24). MclustDA part3 Cross validation [Lecture]. D2l.Sdbor.edu. <https://d2l.sdbor.edu/d2l/le/content/1781558/viewContent/11116024/View>
+21. Saunders, C. (2023, February 24). Mclust Play Part2 R file [Lecture]. D2l.Sdbor.edu. <https://d2l.sdbor.edu/d2l/le/content/1781558/viewContent/11116026/View>
+22. Saunders, C. (2023, February 24). Mclust Play Part3 R file [Lecture]. D2l.Sdbor.edu. <https://d2l.sdbor.edu/d2l/le/content/1781558/viewContent/11116025/View>
+23. Chat.openai.com, <https://chat.openai.com/>.
